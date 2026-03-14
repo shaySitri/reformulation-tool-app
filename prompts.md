@@ -960,3 +960,113 @@ Build: ✓ 39 modules, 0 errors
 
 ### Notes
 3 files changed. normalizeNumbers.js updated (TEENS feminine), preprocessInput.js created, App.jsx updated. Build passes.
+
+---
+
+## Prompt 18 — 2026-03-14
+
+### User Prompt
+The next step is to add an option for the user to record their request using the microphone.
+
+Requirements:
+
+1. Add a microphone button that allows the user to record their request.
+
+2. Recording must be limited to a maximum of 30 seconds.
+
+3. The user should be able to:
+- start recording
+- stop recording manually
+- automatically stop after 30 seconds if the user does not stop it
+
+4. After the recording ends, the spoken request should be transcribed to text.
+
+5. The transcription must be written directly into the existing command input field, exactly as spoken, just as if the user typed it.
+Important:
+- if the user mixes Hebrew and English
+- if the user makes mistakes
+- if the transcription includes unsupported characters
+
+the visible text in the input field should still remain the raw transcription and should reflect what the user said.
+
+6. Do not modify the visible transcription in the input field.
+
+7. The existing preprocessing logic must be applied only behind the scenes, right before sending the request to the backend.
+This includes:
+- number normalization
+- cleaning of unsupported characters
+- any other existing preprocessing steps
+
+8. The transcription should NOT be sent automatically to the backend.
+The user should still press the submit button after reviewing the command.
+
+9. Keep the interface simple and user-friendly for older adults.
+
+Before implementing, briefly explain:
+- which browser speech-to-text technology you will use
+- how the recording flow will work (start, stop, timeout)
+- how the transcription will be inserted into the input field
+- how the raw visible transcription will be preserved
+- how the preprocessing logic will be applied behind the scenes before submission
+
+Also remember to document the FULL prompt and the FULL response in prompts.md.
+
+DONT write code until I approved the plan.
+
+### Claude Response
+Plan presented and approved before any code was written.
+
+Technology: Web Speech API (SpeechRecognition / webkitSpeechRecognition).
+Browser-native, no cost, supports he-IL. Available in iOS Safari (primary
+target) and Chrome. Hidden on unsupported browsers (Firefox).
+
+Recording flow:
+  - Start: recognition.start() + 30s setTimeout auto-stop timer
+  - Manual stop: recognition.stop() + clearTimeout
+  - Auto-stop: timer fires recognition.stop() after 30 seconds
+  - onend always clears the recording flag regardless of how it ended
+
+Transcription → input field:
+  onresult accumulates all final segments + current interim segment and
+  calls onTranscript(rawText). App.jsx uses setUtterance as the callback,
+  so the input field updates live as the user speaks.
+
+Raw transcript preserved:
+  utterance state is set directly from the SpeechRecognition result.
+  No preprocessing, no filtering. The visible field always shows exactly
+  what the browser transcribed, including any English, punctuation, etc.
+
+Preprocessing behind the scenes:
+  preprocessInput() is called only in sendUtterance() at submit time,
+  unchanged. Recording never auto-submits.
+
+Files created/modified:
+
+frontend/src/utils/useSpeechRecognition.js (NEW)
+  - Custom hook: { startRecording, stopRecording, recording, supported }
+  - lang='he-IL', continuous=true, interimResults=true
+  - onTranscript stored in ref to avoid stale closure
+  - 30-second auto-stop via setTimeout
+
+frontend/src/components/CommandInput.jsx
+  - New props: recording, onStartRecording, onStopRecording, speechSupported
+  - Mic button: '🎙 הקלטה קולית' / '⏹ עצור הקלטה' — hidden if not supported
+  - Input and submit disabled while recording
+  - Placeholder changes to 'מאזין...' while recording
+  - Red pulsing input border + recording hint text while mic is active
+  - aria-live, aria-pressed, aria-label for accessibility
+
+frontend/src/components/CommandInput.module.css
+  - .inputRecording: red border + pulse animation
+  - .micButton / .micButtonRecording: idle/active states
+  - .recordingHint: small red status text
+
+frontend/src/App.jsx
+  - useSpeechRecognition imported and called with onTranscript: setUtterance
+  - resetAll() calls stopRecording() before clearing state
+  - Step 1 of instructions updated to mention the mic button
+
+Build: ✓ 40 modules, 0 errors
+
+### Notes
+4 commits pushed to GitHub. No backend changes. Build passes.
