@@ -11,15 +11,15 @@
  */
 
 :root {
-  /* Typography */
-  font-family: 'Arial Hebrew', Arial, 'Helvetica Neue', Helvetica, sans-serif;
+  /* Typography — Rubik body font, falls back to Arabic/Hebrew system fonts */
+  font-family: 'Rubik', 'Arial Hebrew', Arial, 'Helvetica Neue', Helvetica, sans-serif;
   font-size: 20px;
   line-height: 1.6;
   font-weight: 400;
 
-  /* Colour palette */
-  color: #1a1a2e;
-  background-color: #f4f6f9;
+  /* Colour palette — Direction 1: Calm & Clear */
+  color: #1E293B;
+  background-color: #F7F9FC;
 
   /* Smooth text rendering */
   text-rendering: optimizeLegibility;
@@ -39,7 +39,9 @@ body {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  background-color: #f4f6f9;
+  /* Subtle blue-tinted gradient from top — Direction 1 signature */
+  background: linear-gradient(160deg, #EEF2FF 0%, #F7F9FC 40%);
+  background-attachment: fixed;
 }
 
 #root {

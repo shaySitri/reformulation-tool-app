@@ -36,17 +36,17 @@
 /* Hebrew text input */
 .input {
   width: 100%;
-  padding: 0.85rem 1rem;
+  padding: 0.9rem 1rem;
   font-size: 1.1rem;
   font-family: inherit;
-  color: #1a1a2e;
+  color: #1E293B;
   background-color: #ffffff;
-  border: 2px solid #bdc3c7;
-  border-radius: 10px;
+  border: 2px solid #CBD5E1;
+  border-radius: 12px;
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   /* Minimum height for comfortable touch target */
-  min-height: 54px;
+  min-height: 56px;
   /* RTL is inherited from <html dir="rtl"> */
   box-sizing: border-box;
 }
@@ -62,17 +62,17 @@
 }
 
 .input::placeholder {
-  color: #95a5a6;
+  color: #94A3B8;
 }
 
 .input:focus {
-  border-color: #1a56db;
-  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.15);
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .input:disabled {
-  background-color: #ecf0f1;
-  color: #7f8c8d;
+  background-color: #F1F5F9;
+  color: #94A3B8;
   cursor: not-allowed;
 }
 
@@ -91,7 +91,7 @@
   50%       { box-shadow: 0 0 0 6px rgba(229, 62, 62, 0.08); }
 }
 
-/* Submit button */
+/* Submit button — Direction 1: bright blue with lifted shadow */
 .button {
   width: 100%;
   padding: 1rem;
@@ -99,32 +99,36 @@
   font-family: inherit;
   font-weight: 700;
   color: #ffffff;
-  background-color: #1a56db;
+  background-color: #2563EB;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
   /* Minimum height for comfortable touch target */
   min-height: 58px;
-  transition: background-color 0.2s ease, opacity 0.2s ease;
+  /* Lifted shadow makes this the clear primary action */
+  box-shadow: 0 3px 12px rgba(37, 99, 235, 0.30);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
   letter-spacing: 0.02em;
 }
 
 .button:hover:not(:disabled) {
-  background-color: #1648c0;
+  background-color: #1D4ED8;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.38);
 }
 
 .button:active:not(:disabled) {
-  background-color: #123ba3;
+  background-color: #1E40AF;
 }
 
 .button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 /* Focus ring for keyboard navigation */
 .button:focus-visible {
-  outline: 3px solid #1a56db;
+  outline: 3px solid #2563EB;
   outline-offset: 3px;
 }
 
@@ -156,8 +160,8 @@
 }
 
 .micIcon:hover:not(:disabled) {
-  color: #1a56db;
-  background-color: rgba(26, 86, 219, 0.08);
+  color: #2563EB;
+  background-color: rgba(37, 99, 235, 0.08);
 }
 
 .micIcon:disabled {
@@ -166,7 +170,7 @@
 }
 
 .micIcon:focus-visible {
-  outline: 3px solid #1a56db;
+  outline: 3px solid #2563EB;
   outline-offset: 2px;
 }
 
