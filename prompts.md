@@ -1070,3 +1070,105 @@ Build: ✓ 40 modules, 0 errors
 
 ### Notes
 4 commits pushed to GitHub. No backend changes. Build passes.
+
+---
+
+## Prompt 19 — 2026-03-14
+
+### User Prompt
+I found two issues that need to be fixed.
+
+1. Update the preprocessing logic.
+
+Add a rule to the existing preprocessing step:
+If the word "סירי" appears in the command, remove it before sending the request to the backend.
+
+Do not change the text visible to the user in the input field.
+Remove "סירי" only in the cleaned command that is sent to the backend.
+
+2. Improve the recording button usability.
+
+The current recording button is not very user-friendly.
+
+Instead of the current button, add a small microphone icon next to the input text field.
+
+Requirements:
+- place the microphone icon inside or next to the command input field
+- keep the design clean and easy to use for older adults
+- clicking the icon should start/stop recording
+
+Before implementing, briefly explain how you will modify the UI layout.
+
+Also remember to document the FULL prompt and the FULL response in prompts.md.
+
+### Assistant Response (plan)
+
+#### Fix 1 — Remove "סירי" in preprocessing
+
+In `preprocessInput.js`, add a step that strips the word `סירי` (with optional surrounding spaces) from the processed string, applied after number normalization and before character cleaning. The raw `utterance` state in the input field is never touched.
+
+#### Fix 2 — Mic icon inside the input field
+
+**Current layout**: input field (full width) → submit button → mic button (full width, below submit).
+
+**New layout**: A wrapper `div` with `position: relative` around the input. The mic icon sits absolutely positioned inside the input field on the right edge (left edge in RTL, i.e., the leading side). The input gets `padding-inline-end` increased so the text doesn't overlap the icon. The full-width mic button row below the submit button is removed entirely.
+
+This keeps the form to two elements (input + submit), reduces visual clutter, and gives older adults a clear, single-purpose input area with an integrated recording indicator.
+
+User approved. Implementation proceeded.
+
+### Implementation
+
+#### Fix 1 — preprocessInput.js
+
+Added `removeSiri()` as step 2 in the pipeline (between `normalizeNumbers` and `cleanInput`):
+
+```js
+function removeSiri(text) {
+  return text.replace(/\s*סירי\s*/g, ' ').trim()
+}
+```
+
+Pipeline order: `normalizeNumbers` → `removeSiri` → `cleanInput`
+
+The visible input field is never modified. Only the string sent to the backend is affected.
+
+#### Fix 2 — CommandInput redesign
+
+`CommandInput.jsx`:
+- Wrapped input in `<div className={styles.inputWrapper}>` (position: relative)
+- Replaced full-width `<button className={styles.micButton}>` with `<button className={styles.micIcon}>` positioned absolutely inside the wrapper
+- Input gains `styles.inputWithMic` class when speechSupported, adding `padding-inline-end: 3.4rem` to prevent text/icon overlap
+- Mic icon: `'🎙'` idle / `'⏹'` while recording
+- Recording hint text updated: "לחצו על הסמל לעצירה" (instead of referencing the old button label)
+
+`CommandInput.module.css`:
+- Added `.inputWrapper`: `position: relative; width: 100%`
+- Added `.inputWithMic`: `padding-inline-end: 3.4rem`
+- Added `box-sizing: border-box` to `.input`
+- Replaced `.micButton` / `.micButtonRecording` with:
+  - `.micIcon`: absolutely positioned, 2.4rem × 2.4rem, `right: 0.5rem`, `top: 50%`, `transform: translateY(-50%)`, grey color, hover turns blue
+  - `.micIconRecording`: red color + `@keyframes micPulse` (opacity fade 1→0.5→1, 1.4s)
+- Removed `.micButton`, `.micButtonRecording`, and their hover/disabled variants
+
+Files changed:
+
+frontend/src/utils/preprocessInput.js
+  - removeSiri() added as pipeline step 2
+  - JSDoc updated with new step, new example
+
+frontend/src/components/CommandInput.jsx
+  - input wrapped in .inputWrapper div
+  - full-width mic button replaced with inline .micIcon button
+  - recording hint text updated
+
+frontend/src/components/CommandInput.module.css
+  - .inputWrapper, .inputWithMic added
+  - .micIcon, .micIconRecording, @keyframes micPulse added
+  - .micButton, .micButtonRecording removed
+
+Build: ✓ 40 modules, 0 errors
+
+### Commits
+- `67db6ef` feat: remove "סירי" wake word in preprocessing before backend request
+- `d309d8f` feat: replace full-width mic button with inline mic icon inside input field
