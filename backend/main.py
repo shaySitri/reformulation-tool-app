@@ -25,6 +25,12 @@ All three NLP models are loaded exactly once at server startup via the
 Because models live in app.state (shared across all requests), every request
 is served without any per-call cold-start overhead after the initial startup.
 
+Error message policy
+--------------------
+HTTP error responses (400, 500) use intentionally generic messages.
+Internal failure reasons — validation rule details, model outputs, exception
+messages — are logged server-side but never sent to the client.
+
 Running the server locally
 --------------------------
     # From the repository root:
@@ -78,8 +84,7 @@ MODEL_DIR = Path(os.getenv("MODEL_DIR", str(_DEFAULT_MODEL_DIR)))
 
 # ---------------------------------------------------------------------------
 # Lifespan context manager — runs startup logic before the first request and
-# shutdown logic after the last request.  Using lifespan (rather than the
-# deprecated @app.on_event) is the recommended pattern in FastAPI >= 0.99.
+# shutdown logic after the last request.
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -104,7 +109,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield  # Server is live — handle incoming requests.
 
     logger.info("=== Shutdown: releasing resources. ===")
-    # PyTorch tensors and HuggingFace pipelines are garbage-collected here.
     app.state.classifier = None
 
 
@@ -117,15 +121,19 @@ app = FastAPI(
         "Transforms natural-language Hebrew utterances into structured commands "
         "suitable for reading aloud to Siri. "
         "Designed for elderly Israeli smartphone users.\n\n"
-        "**Pipeline:** AlephBERT intent classifier → heBERT NER → template filling."
+        "**Pipeline:** AlephBERT intent classifier → heBERT NER → template filling "
+        "→ output validation.\n\n"
+        "**Input rules:** Hebrew letters and spaces only. "
+        "English letters, digits, and special characters are rejected.\n\n"
+        "**Response status field:** `success` when the output passed validation; "
+        "`failed` when the pipeline produced an unusable result."
     ),
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
 # ---------------------------------------------------------------------------
-# CORS — allow all origins during development so the React/Vite dev server
-# (running on a different port) can call the API without browser CORS errors.
+# CORS — allow all origins during development.
 # In production, replace allow_origins=["*"] with the deployed frontend URL.
 # ---------------------------------------------------------------------------
 app.add_middleware(
@@ -146,19 +154,14 @@ app.add_middleware(
     "/health",
     response_model=HealthResponse,
     summary="Health / liveness check",
-    description=(
-        "Returns HTTP 200 with `status: ok` when the server is running. "
-        "`models_loaded` is True once the intent classifier has been loaded "
-        "into memory at startup."
-    ),
     tags=["Monitoring"],
 )
 def health_check(request: Request) -> HealthResponse:
     """
-    Lightweight liveness probe for load balancers and monitoring tools.
+    Lightweight liveness probe.
 
-    Returns:
-        HealthResponse indicating whether the server and models are ready.
+    Returns 200 OK with models_loaded=True once the intent classifier has
+    been loaded into memory at startup.
     """
     models_ready = (
         hasattr(request.app.state, "classifier")
@@ -174,20 +177,19 @@ def health_check(request: Request) -> HealthResponse:
     responses={
         400: {
             "model": ErrorResponse,
-            "description": "Utterance is empty or whitespace-only.",
+            "description": "Input is empty, whitespace-only, or contains invalid characters.",
         },
         500: {
             "model": ErrorResponse,
-            "description": "Internal NLP pipeline error.",
+            "description": "Internal pipeline error.",
         },
     },
     summary="Reformulate a Hebrew utterance",
     description=(
-        "Accepts a raw Hebrew voice command, classifies its intent using the "
-        "AlephBERT model, extracts named entities via Hebrew NER models, and "
-        "returns a structured command that can be read aloud to Siri.\n\n"
-        "**Example input:** `תשלחי הודעה לישראל שאני מאחרת`\n\n"
-        "**Example output:** `שלח הודעה לישראל: אני מאחרת`"
+        "Accepts a raw Hebrew voice command. Validates the input character set, "
+        "classifies the intent, extracts entities, and returns a structured command.\n\n"
+        "A successful HTTP 200 response may carry `status: failed` if the pipeline "
+        "produced an unusable output — in that case `reformulated` is null."
     ),
     tags=["Pipeline"],
 )
@@ -196,7 +198,8 @@ def reformulate_utterance(
     request: Request,
 ) -> ReformulateResponse:
     """
-    Full pipeline endpoint: classify intent → extract entities → build command.
+    Full pipeline endpoint: validate input → classify intent → extract entities
+    → build command → validate output → return structured response.
 
     The route handler is a regular (non-async) function because the NLP
     pipeline is CPU-bound synchronous code. FastAPI automatically runs sync
@@ -207,37 +210,34 @@ def reformulate_utterance(
         request: FastAPI request object used to access app.state.classifier.
 
     Returns:
-        ReformulateResponse with the original text, predicted intent,
-        and the reformulated Hebrew command.
+        ReformulateResponse with status, original text, predicted intent,
+        and the reformulated Hebrew command (null if status is "failed").
 
     Raises:
-        HTTPException 400: If the utterance is empty or whitespace-only.
-        HTTPException 500: If the internal NLP pipeline raises an error.
+        HTTPException 400: Input failed Stage 1 validation.
+                           Generic message — does not reveal which rule failed.
+        HTTPException 500: The reformulation module raised an unexpected error.
+                           Generic message — does not expose internal details.
     """
-    # Validate input — empty strings are rejected early before hitting the
-    # expensive NLP models. The pipeline.run_pipeline() also validates, but
-    # we duplicate the check here for a cleaner HTTP response.
-    utterance = body.utterance.strip()
-    if not utterance:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Utterance must not be empty.",
-        )
-
     try:
-        result = run_pipeline(utterance=utterance, classifier=request.app.state.classifier)
-    except ValueError as exc:
-        # run_pipeline raises ValueError for invalid input (e.g. empty string).
+        result = run_pipeline(
+            utterance=body.utterance,
+            classifier=request.app.state.classifier,
+        )
+    except ValueError:
+        # Stage 1 validation failure (empty input or invalid characters).
+        # The generic message deliberately does not specify which rule failed.
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        ) from exc
-    except RuntimeError as exc:
-        # run_pipeline raises RuntimeError if the reformulation module fails.
-        logger.exception("Pipeline error for utterance: %r", utterance)
+            detail="Invalid input.",
+        )
+    except RuntimeError:
+        # Reformulation module raised an unexpected exception.
+        # Log the details server-side; send only a generic message to the client.
+        logger.exception("Pipeline RuntimeError for utterance: %r", body.utterance[:60])
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
-        ) from exc
+            detail="An internal error occurred.",
+        )
 
     return ReformulateResponse(**result)

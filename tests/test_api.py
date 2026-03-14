@@ -1,566 +1,444 @@
 """
 test_api.py
 -----------
-Full pytest test suite for the Hebrew Voice Command Reformulation API.
+Groups B–E — Integration tests for the POST /reformulate API endpoint.
 
-Test categories
----------------
-1. Pipeline structure tests  — verify API response shape, field types, and
-                               HTTP status codes are always correct.
-2. Functional intent tests   — one representative Hebrew utterance per intent
-                               (all 10 intents covered). Verifies the pipeline
-                               does not crash and returns a non-empty result.
-3. Classifier output tests   — verify the intent classifier returns plausible
-                               predictions for unambiguous Hebrew utterances.
-4. Edge case tests           — empty input, whitespace, very long text,
-                               non-Hebrew text, special characters, and
-                               malformed HTTP requests.
+All tests run against the real backend, the real intent classifier model,
+and the real reformulation pipeline. No mocking.
 
-Running the suite
------------------
-    # From the repository root:
-    pytest tests/ -v
+Test focus
+----------
+These tests verify BACKEND BEHAVIOR, not model quality:
+  - The API response schema is always well-formed.
+  - The 'status' field is always "success" or "failed".
+  - Invalid input is rejected with HTTP 400 (Stage 1 validation).
+  - Valid Hebrew input always produces a well-structured HTTP 200 response.
+  - The 'reformulated' field is null when and only when status is "failed".
+  - 'original', 'intent_id', and 'intent_label' are always present and typed correctly.
+  - Deterministic intents (camera, flashlight) produce exact known outputs.
+  - Malformed requests produce HTTP 4xx responses.
 
-    # Run only one category:
-    pytest tests/ -v -k "functional"
-    pytest tests/ -v -k "edge"
-    pytest tests/ -v -k "classifier"
+What these tests deliberately do NOT assert:
+  - Whether the classifier predicted the "correct" intent.
+  - Whether the reformulated string is linguistically optimal.
+  - The exact content of 'reformulated' for non-deterministic intents.
+
+Run with:
+    pytest tests/test_api.py -v
 """
 
 import pytest
 from fastapi.testclient import TestClient
 
+from backend.main import app
 
-# ===========================================================================
-# Helper constants
-# ===========================================================================
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
 
-# Expected intent labels for the 10 classes (mirrors model config.json)
-INTENT_LABELS = {
-    0: "call",
-    1: "alarm",
-    2: "sms",
-    3: "search_query",
-    4: "navigation",
-    5: "calendar",
-    6: "camera",
-    7: "weather",
-    8: "notes",
-    9: "flashlight",
-}
+# All valid intent labels — used to verify the 'intent_label' field.
+VALID_INTENT_LABELS = frozenset({
+    "call", "alarm", "sms", "search_query", "navigation",
+    "calendar", "camera", "weather", "notes", "flashlight",
+})
 
-# Known exact outputs for the two zero-argument intents (camera, flashlight).
-# These handlers ignore the utterance and return a hard-coded Hebrew string.
+# Exact outputs for the two deterministic intents (no NER, no extraction).
 CAMERA_OUTPUT = "תפתחי מצלמה"
 FLASHLIGHT_OUTPUT = "להדליק פנס"
 
 
-# ===========================================================================
-# Utility functions
-# ===========================================================================
+# ---------------------------------------------------------------------------
+# Session-scoped client fixture (models load once for the full test session)
+# ---------------------------------------------------------------------------
 
-def post_reformulate(client: TestClient, utterance: str) -> dict:
+@pytest.fixture(scope="session")
+def client() -> TestClient:
     """
-    Helper: POST /reformulate with the given utterance and return the JSON body.
+    Session-scoped TestClient. FastAPI's lifespan context manager is triggered
+    once for the entire pytest session:
+      - Startup: IntentClassifier.load() + NER models already in memory.
+      - Shutdown: resources released after all tests complete.
 
-    Args:
-        client:    The session-scoped TestClient.
-        utterance: Hebrew text to send.
-
-    Returns:
-        Parsed JSON response body as a dict.
+    Using session scope prevents reloading 3+ BERT models for every test,
+    reducing total runtime from hours to ~30 seconds.
     """
-    response = client.post("/reformulate", json={"utterance": utterance})
-    return response
+    with TestClient(app) as test_client:
+        yield test_client
 
 
-def assert_valid_response_structure(body: dict) -> None:
+# ---------------------------------------------------------------------------
+# Shared helpers
+# ---------------------------------------------------------------------------
+
+def post(client: TestClient, utterance: str):
+    """POST /reformulate with the given utterance. Returns the response object."""
+    return client.post("/reformulate", json={"utterance": utterance})
+
+
+def assert_success_schema(body: dict) -> None:
     """
-    Assert that a successful response body contains all required fields with
-    the correct types.
+    Assert that a body with status='success' has all required fields with
+    correct types and that 'reformulated' is a non-null Hebrew-containing string.
 
-    This helper is reused across every functional test so that structure
-    validation is never omitted.
-
-    Args:
-        body: Parsed JSON dict from a 200 response.
+    Does NOT assert the content of 'reformulated' (not a model-quality test).
     """
-    assert "original" in body, "Response must contain 'original' field"
-    assert "intent_id" in body, "Response must contain 'intent_id' field"
-    assert "intent_label" in body, "Response must contain 'intent_label' field"
-    assert "reformulated" in body, "Response must contain 'reformulated' field"
+    assert body["status"] == "success"
+    assert isinstance(body["reformulated"], str), "'reformulated' must be a string on success"
+    assert len(body["reformulated"].strip()) > 0, "'reformulated' must not be empty on success"
+    # Must contain at least one Hebrew character (U+05D0-U+05EA)
+    has_hebrew = any("\u05D0" <= ch <= "\u05EA" for ch in body["reformulated"])
+    assert has_hebrew, f"'reformulated' must contain Hebrew: {body['reformulated']!r}"
 
-    assert isinstance(body["original"], str), "'original' must be a string"
-    assert isinstance(body["intent_id"], int), "'intent_id' must be an integer"
-    assert isinstance(body["intent_label"], str), "'intent_label' must be a string"
-    assert isinstance(body["reformulated"], str), "'reformulated' must be a string"
 
-    assert 0 <= body["intent_id"] <= 9, f"'intent_id' must be 0–9, got {body['intent_id']}"
-    assert body["intent_label"] in INTENT_LABELS.values(), (
-        f"'intent_label' must be a known label, got {body['intent_label']!r}"
+def assert_common_schema(body: dict) -> None:
+    """
+    Assert the fields that must be present and correctly typed in every
+    HTTP 200 response, regardless of status.
+    """
+    assert "status" in body
+    assert "original" in body
+    assert "intent_id" in body
+    assert "intent_label" in body
+    assert "reformulated" in body  # field must exist (value may be null)
+
+    assert body["status"] in ("success", "failed"), (
+        f"'status' must be 'success' or 'failed', got {body['status']!r}"
     )
-    assert len(body["reformulated"]) > 0, "'reformulated' must not be an empty string"
+    assert isinstance(body["original"], str)
+    assert isinstance(body["intent_id"], int)
+    assert isinstance(body["intent_label"], str)
+    assert 0 <= body["intent_id"] <= 9, f"'intent_id' out of range: {body['intent_id']}"
+    assert body["intent_label"] in VALID_INTENT_LABELS, (
+        f"'intent_label' is not a known label: {body['intent_label']!r}"
+    )
 
 
 # ===========================================================================
-# 1. Pipeline structure tests
+# Group B — Input rejection tests (Stage 1 validation via HTTP)
 # ===========================================================================
 
-class TestPipelineStructure:
+class TestInputRejection:
     """
-    Verify the API response structure and HTTP status codes are always correct,
-    independent of which intent is predicted.
+    Verify that Stage 1 input validation rejects invalid input at the HTTP layer.
+    All cases expect HTTP 400 with a generic error body.
+    The specific failure reason (empty vs invalid chars) is not revealed.
     """
 
-    def test_health_endpoint_returns_200(self, client: TestClient) -> None:
+    def test_empty_string_returns_400(self, client: TestClient) -> None:
+        """Empty string must be rejected before reaching the pipeline."""
+        response = post(client, "")
+        assert response.status_code == 400
+        assert "detail" in response.json()
+
+    def test_whitespace_only_returns_400(self, client: TestClient) -> None:
+        """Whitespace-only input must be rejected before reaching the pipeline."""
+        response = post(client, "   \t\n  ")
+        assert response.status_code == 400
+        assert "detail" in response.json()
+
+    def test_english_only_returns_400(self, client: TestClient) -> None:
+        """Pure English input must be rejected by Stage 1 validation."""
+        response = post(client, "call my mom")
+        assert response.status_code == 400
+
+    def test_hebrew_with_digit_returns_400(self, client: TestClient) -> None:
+        """Hebrew with a digit must be rejected — digits are not in the allowed set."""
+        response = post(client, "תשלחי הודעה ל7")
+        assert response.status_code == 400
+
+    def test_hebrew_with_english_returns_400(self, client: TestClient) -> None:
+        """Hebrew mixed with a Latin word must be rejected."""
+        response = post(client, "תתקשרי John")
+        assert response.status_code == 400
+
+    def test_hash_characters_return_400(self, client: TestClient) -> None:
+        """Hash placeholder characters must be rejected."""
+        response = post(client, "####")
+        assert response.status_code == 400
+
+    def test_time_with_colon_returns_400(self, client: TestClient) -> None:
+        """Time format with colon (e.g. '7:30') must be rejected."""
+        response = post(client, "תעירי אותי ב7:30")
+        assert response.status_code == 400
+
+    def test_error_detail_is_generic(self, client: TestClient) -> None:
         """
-        GET /health must return 200 OK when the server is running.
-        Verifies the liveness probe works before any pipeline tests run.
+        The error message must not expose which validation rule failed.
+        It must be the same for all Stage 1 rejections.
         """
+        response_empty = post(client, "")
+        response_english = post(client, "hello")
+        assert response_empty.status_code == 400
+        assert response_english.status_code == 400
+        # Both must have the same generic detail message
+        assert response_empty.json()["detail"] == response_english.json()["detail"]
+
+
+# ===========================================================================
+# Group C — API structure tests (real pipeline, valid Hebrew inputs)
+# ===========================================================================
+
+class TestAPIStructure:
+    """
+    Verify that for valid Hebrew inputs the API always returns a well-formed
+    HTTP 200 response with all required fields correctly typed.
+
+    These tests do NOT assert which intent was predicted or what the
+    reformulated string contains — only that the structure is correct.
+    """
+
+    def test_health_check_passes(self, client: TestClient) -> None:
+        """GET /health must return 200 with models_loaded=True."""
         response = client.get("/health")
         assert response.status_code == 200
         body = response.json()
         assert body["status"] == "ok"
         assert body["models_loaded"] is True
 
-    def test_successful_response_has_all_required_fields(self, client: TestClient) -> None:
-        """
-        A valid Hebrew utterance must produce a 200 response containing
-        all four required fields: original, intent_id, intent_label, reformulated.
-        """
-        response = post_reformulate(client, "תתקשרי לאמא שלי")
+    def test_valid_input_returns_200(self, client: TestClient) -> None:
+        """A valid Hebrew utterance must produce HTTP 200."""
+        response = post(client, "תתקשרי לאמא שלי")
         assert response.status_code == 200
-        assert_valid_response_structure(response.json())
 
-    def test_original_field_matches_stripped_input(self, client: TestClient) -> None:
-        """
-        The 'original' field must reflect the utterance after whitespace stripping,
-        not the raw bytes from the request body.
-        """
-        response = post_reformulate(client, "  תתקשרי לאמא שלי  ")
+    def test_response_has_all_required_fields(self, client: TestClient) -> None:
+        """HTTP 200 response must contain status, original, intent_id, intent_label, reformulated."""
+        response = post(client, "תתקשרי לאמא שלי")
+        assert response.status_code == 200
+        assert_common_schema(response.json())
+
+    def test_status_field_is_valid_enum(self, client: TestClient) -> None:
+        """'status' must be exactly 'success' or 'failed'."""
+        response = post(client, "תתקשרי לאמא שלי")
+        assert response.status_code == 200
+        assert response.json()["status"] in ("success", "failed")
+
+    def test_original_matches_stripped_input(self, client: TestClient) -> None:
+        """'original' must equal the utterance after stripping whitespace."""
+        response = post(client, "  תתקשרי לאמא שלי  ")
         assert response.status_code == 200
         assert response.json()["original"] == "תתקשרי לאמא שלי"
 
-    def test_intent_id_is_within_valid_range(self, client: TestClient) -> None:
-        """
-        The 'intent_id' must always be one of the 10 valid class indices (0–9),
-        even for unusual inputs.
-        """
-        response = post_reformulate(client, "שלום")
-        assert response.status_code == 200
-        assert 0 <= response.json()["intent_id"] <= 9
-
-    def test_intent_label_matches_intent_id(self, client: TestClient) -> None:
-        """
-        The 'intent_label' must be the canonical label for the returned 'intent_id'.
-        These must be consistent with each other (not mismatch).
-        """
-        response = post_reformulate(client, "תתקשרי לאמא שלי")
+    def test_intent_id_is_integer_in_range(self, client: TestClient) -> None:
+        """'intent_id' must be a Python int in 0–9."""
+        response = post(client, "תתקשרי לאמא שלי")
         assert response.status_code == 200
         body = response.json()
-        expected_label = INTENT_LABELS[body["intent_id"]]
-        assert body["intent_label"] == expected_label, (
-            f"intent_label={body['intent_label']!r} does not match "
-            f"intent_id={body['intent_id']} (expected {expected_label!r})"
-        )
+        assert type(body["intent_id"]) is int
+        assert 0 <= body["intent_id"] <= 9
+
+    def test_intent_label_is_known_label(self, client: TestClient) -> None:
+        """'intent_label' must be one of the 10 registered intent names."""
+        response = post(client, "תתקשרי לאמא שלי")
+        assert response.status_code == 200
+        assert response.json()["intent_label"] in VALID_INTENT_LABELS
+
+    def test_intent_id_and_label_are_consistent(self, client: TestClient) -> None:
+        """
+        'intent_label' must be the canonical label for 'intent_id'.
+        The two fields must be consistent — not independently set.
+        """
+        from backend.model_loader import IntentClassifier
+        # Read the id2label mapping from the loaded classifier
+        response = post(client, "תתקשרי לאמא שלי")
+        assert response.status_code == 200
+        body = response.json()
+        # The label for the returned id must match the returned label
+        # We verify via the known mapping rather than hitting the model again
+        from backend.pipeline import _INTENT_LABELS
+        expected_label = _INTENT_LABELS[body["intent_id"]]
+        assert body["intent_label"] == expected_label
+
+    def test_success_status_implies_non_null_reformulated(self, client: TestClient) -> None:
+        """When status='success', 'reformulated' must be a non-null string."""
+        response = post(client, "תתקשרי לאמא שלי")
+        assert response.status_code == 200
+        body = response.json()
+        if body["status"] == "success":
+            assert_success_schema(body)
+
+    def test_failed_status_implies_null_reformulated(self, client: TestClient) -> None:
+        """
+        When status='failed', 'reformulated' must be null.
+        This test verifies the invariant. If the pipeline succeeds on this
+        input (status='success'), the test passes vacuously — we are not
+        testing model quality, only the schema invariant.
+        """
+        response = post(client, "שלום")  # minimal input, may succeed or fail
+        assert response.status_code == 200
+        body = response.json()
+        if body["status"] == "failed":
+            assert body["reformulated"] is None, (
+                "When status='failed', 'reformulated' must be null"
+            )
+
+    def test_reformulated_is_null_or_hebrew_string(self, client: TestClient) -> None:
+        """
+        'reformulated' must be either null (status='failed') or a non-empty
+        string containing at least one Hebrew character (status='success').
+        """
+        response = post(client, "תתקשרי לאמא שלי")
+        assert response.status_code == 200
+        body = response.json()
+        if body["reformulated"] is None:
+            assert body["status"] == "failed"
+        else:
+            assert isinstance(body["reformulated"], str)
+            has_hebrew = any("\u05D0" <= ch <= "\u05EA" for ch in body["reformulated"])
+            assert has_hebrew
 
     def test_content_type_is_json(self, client: TestClient) -> None:
-        """
-        The response Content-Type header must be application/json.
-        """
-        response = post_reformulate(client, "תתקשרי לאמא שלי")
+        """Response Content-Type must be application/json."""
+        response = post(client, "תתקשרי לאמא שלי")
         assert "application/json" in response.headers["content-type"]
 
+    def test_classifier_is_deterministic(self, client: TestClient) -> None:
+        """
+        The same utterance submitted twice must produce the same intent_id.
+        The model is in eval mode with dropout disabled — results are deterministic.
+        """
+        utterance = "תצלמי תמונה"
+        r1 = post(client, utterance)
+        r2 = post(client, utterance)
+        assert r1.status_code == 200
+        assert r2.status_code == 200
+        assert r1.json()["intent_id"] == r2.json()["intent_id"]
+
+    def test_multiple_valid_inputs_all_return_200(self, client: TestClient) -> None:
+        """
+        A set of diverse valid Hebrew utterances must all return HTTP 200.
+        This is a smoke test — it does not assert intent or output content.
+        """
+        utterances = [
+            "תתקשרי לאמא שלי",
+            "תעירי אותי בבוקר",
+            "תשלחי הודעה לדוד",
+            "תחפשי מידע על סוכרת",
+            "תנווטי אותי לתל אביב",
+            "תצרי פגישה ביומן",
+            "תצלמי תמונה",
+            "מה מזג האוויר היום",
+            "תכתבי לי פתק",
+            "תדליקי את הפנס",
+        ]
+        for utterance in utterances:
+            response = post(client, utterance)
+            assert response.status_code == 200, (
+                f"Expected 200 for {utterance!r}, got {response.status_code}"
+            )
+            assert_common_schema(response.json())
+
 
 # ===========================================================================
-# 2. Functional intent tests — all 10 intents
+# Group D — Deterministic integration tests (camera and flashlight)
 # ===========================================================================
 
-class TestFunctionalIntents:
+class TestDeterministicIntents:
     """
-    One representative Hebrew utterance per intent. Each test verifies that:
-      - The HTTP status is 200.
-      - The response structure is valid (all fields, correct types).
-      - The reformulated output is non-empty.
+    Camera (intent 6) and flashlight (intent 9) handlers take no arguments
+    and return fixed Hebrew strings unconditionally. Their output is known
+    in advance and does not depend on NER or entity extraction.
 
-    These are integration tests of the full pipeline. We deliberately do NOT
-    assert exact reformulated strings because NER output may vary slightly by
-    model version or runtime. We DO assert the expected intent label for
-    unambiguous utterances, since the model has 99.61% accuracy.
+    These are the only tests that assert exact reformulated content, because
+    that content is a constant — not a model prediction.
     """
 
-    def test_intent_call(self, client: TestClient) -> None:
+    def test_camera_returns_correct_output(self, client: TestClient) -> None:
         """
-        Intent 0 (call): 'תתקשרי לאמא שלי' — 'Call my mom'.
-        Verifies the pipeline handles a clear phone-call command.
+        Camera command must produce the exact hard-coded output "תפתחי מצלמה".
+        status must be "success" (the output passes all validation rules).
         """
-        response = post_reformulate(client, "תתקשרי לאמא שלי")
+        response = post(client, "תצלמי תמונה")
         assert response.status_code == 200
         body = response.json()
-        assert_valid_response_structure(body)
-        assert body["intent_label"] == "call", (
-            f"Expected intent 'call', got {body['intent_label']!r}"
-        )
-
-    def test_intent_alarm(self, client: TestClient) -> None:
-        """
-        Intent 1 (alarm): 'תעירי אותי בשש בבוקר' — 'Wake me up at six in the morning'.
-        Verifies time extraction and alarm template generation.
-        """
-        response = post_reformulate(client, "תעירי אותי בשש בבוקר")
-        assert response.status_code == 200
-        body = response.json()
-        assert_valid_response_structure(body)
-        assert body["intent_label"] == "alarm", (
-            f"Expected intent 'alarm', got {body['intent_label']!r}"
-        )
-
-    def test_intent_sms(self, client: TestClient) -> None:
-        """
-        Intent 2 (sms): 'תשלחי הודעה לדוד שאני בדרך' — 'Send a message to David that I'm on my way'.
-        Verifies person-name extraction and message content extraction.
-        """
-        response = post_reformulate(client, "תשלחי הודעה לדוד שאני בדרך")
-        assert response.status_code == 200
-        body = response.json()
-        assert_valid_response_structure(body)
-        assert body["intent_label"] == "sms", (
-            f"Expected intent 'sms', got {body['intent_label']!r}"
-        )
-
-    def test_intent_search_query(self, client: TestClient) -> None:
-        """
-        Intent 3 (search_query): 'תחפשי לי מידע על מחלת הסוכרת' — 'Search for info about diabetes'.
-        Verifies search-query reformulation strips filler words.
-        """
-        response = post_reformulate(client, "תחפשי לי מידע על מחלת הסוכרת")
-        assert response.status_code == 200
-        body = response.json()
-        assert_valid_response_structure(body)
-        assert body["intent_label"] == "search_query", (
-            f"Expected intent 'search_query', got {body['intent_label']!r}"
-        )
-
-    def test_intent_navigation(self, client: TestClient) -> None:
-        """
-        Intent 4 (navigation): 'תנווטי אותי מהבית לתל אביב' — 'Navigate me from home to Tel Aviv'.
-        Verifies dual-location extraction (origin + destination).
-        """
-        response = post_reformulate(client, "תנווטי אותי מהבית לתל אביב")
-        assert response.status_code == 200
-        body = response.json()
-        assert_valid_response_structure(body)
-        assert body["intent_label"] == "navigation", (
-            f"Expected intent 'navigation', got {body['intent_label']!r}"
-        )
-
-    def test_intent_calendar(self, client: TestClient) -> None:
-        """
-        Intent 5 (calendar): 'תוסיפי פגישה ביומן מחר בשעה שתיים' — 'Add a meeting tomorrow at two'.
-        Verifies date/time parsing and calendar template generation.
-        Note: calander_command() prints debug info to stdout — this is a
-        known issue in the existing script and does not affect correctness.
-        """
-        response = post_reformulate(client, "תוסיפי פגישה ביומן מחר בשעה שתיים")
-        assert response.status_code == 200
-        body = response.json()
-        assert_valid_response_structure(body)
-        assert body["intent_label"] == "calendar", (
-            f"Expected intent 'calendar', got {body['intent_label']!r}"
-        )
-
-    def test_intent_camera(self, client: TestClient) -> None:
-        """
-        Intent 6 (camera): 'תצלמי תמונה' — 'Take a photo'.
-        Camera is a fixed-output intent — the reformulated string is always
-        'תפתחי מצלמה' regardless of the utterance. We verify this exact value.
-        """
-        response = post_reformulate(client, "תצלמי תמונה")
-        assert response.status_code == 200
-        body = response.json()
-        assert_valid_response_structure(body)
-        assert body["intent_label"] == "camera", (
-            f"Expected intent 'camera', got {body['intent_label']!r}"
-        )
+        assert_common_schema(body)
+        assert body["status"] == "success"
         assert body["reformulated"] == CAMERA_OUTPUT, (
-            f"Camera output must always be {CAMERA_OUTPUT!r}, got {body['reformulated']!r}"
+            f"Camera output must be {CAMERA_OUTPUT!r}, got {body['reformulated']!r}"
         )
 
-    def test_intent_weather(self, client: TestClient) -> None:
+    def test_flashlight_returns_correct_output(self, client: TestClient) -> None:
         """
-        Intent 7 (weather): 'מה מזג האוויר היום בירושלים' — 'What is the weather today in Jerusalem'.
-        Verifies location and time-reference extraction for weather queries.
+        Flashlight command must produce the exact hard-coded output "להדליק פנס".
+        status must be "success" (the output passes all validation rules).
         """
-        response = post_reformulate(client, "מה מזג האוויר היום בירושלים")
+        response = post(client, "תדליקי את הפנס")
         assert response.status_code == 200
         body = response.json()
-        assert_valid_response_structure(body)
-        assert body["intent_label"] == "weather", (
-            f"Expected intent 'weather', got {body['intent_label']!r}"
-        )
-
-    def test_intent_notes(self, client: TestClient) -> None:
-        """
-        Intent 8 (notes): 'תכתבי לי פתק לקנות חלב' — 'Write me a note to buy milk'.
-        Verifies meta-word filtering and note content extraction.
-        """
-        response = post_reformulate(client, "תכתבי לי פתק לקנות חלב")
-        assert response.status_code == 200
-        body = response.json()
-        assert_valid_response_structure(body)
-        assert body["intent_label"] == "notes", (
-            f"Expected intent 'notes', got {body['intent_label']!r}"
-        )
-
-    def test_intent_flashlight(self, client: TestClient) -> None:
-        """
-        Intent 9 (flashlight): 'תדליקי את הפנס' — 'Turn on the flashlight'.
-        Flashlight is a fixed-output intent — reformulated is always 'להדליק פנס'.
-        """
-        response = post_reformulate(client, "תדליקי את הפנס")
-        assert response.status_code == 200
-        body = response.json()
-        assert_valid_response_structure(body)
-        assert body["intent_label"] == "flashlight", (
-            f"Expected intent 'flashlight', got {body['intent_label']!r}"
-        )
+        assert_common_schema(body)
+        assert body["status"] == "success"
         assert body["reformulated"] == FLASHLIGHT_OUTPUT, (
-            f"Flashlight output must always be {FLASHLIGHT_OUTPUT!r}, got {body['reformulated']!r}"
+            f"Flashlight output must be {FLASHLIGHT_OUTPUT!r}, got {body['reformulated']!r}"
         )
+
+    def test_camera_output_passes_validator(self, client: TestClient) -> None:
+        """
+        The camera output must be accepted by the Stage 2 validator.
+        This is an end-to-end verification that the validator and the
+        deterministic output are consistent with each other.
+        """
+        from backend.validators import validate_output
+        assert validate_output(CAMERA_OUTPUT) is True
+
+    def test_flashlight_output_passes_validator(self, client: TestClient) -> None:
+        """
+        The flashlight output must be accepted by the Stage 2 validator.
+        """
+        from backend.validators import validate_output
+        assert validate_output(FLASHLIGHT_OUTPUT) is True
 
 
 # ===========================================================================
-# 3. Classifier output tests
+# Group E — HTTP error / protocol tests
 # ===========================================================================
 
-class TestClassifierOutput:
+class TestHTTPErrors:
     """
-    Verify the intent classifier produces plausible outputs.
-
-    These tests focus on the classification step specifically — they do not
-    verify reformulation quality, only that the model makes sensible decisions
-    on clear-cut Hebrew inputs.
+    Verify correct HTTP status codes for malformed requests and wrong methods.
+    These tests do not involve the NLP pipeline.
     """
-
-    def test_classifier_returns_integer_intent_id(self, client: TestClient) -> None:
-        """
-        The intent_id in the response must be a Python int (JSON integer),
-        not a float or string.
-        """
-        response = post_reformulate(client, "תתקשרי לאמא שלי")
-        assert response.status_code == 200
-        body = response.json()
-        # JSON integers come back as Python int via response.json()
-        assert type(body["intent_id"]) is int
-
-    def test_classifier_is_consistent_on_same_input(self, client: TestClient) -> None:
-        """
-        The classifier must be deterministic: the same utterance must always
-        produce the same intent_id when called multiple times in the same session.
-        (Model is in eval mode with no dropout, so this should always hold.)
-        """
-        utterance = "תשלחי הודעה לרחל שאני מאחרת"
-        response_1 = post_reformulate(client, utterance)
-        response_2 = post_reformulate(client, utterance)
-        assert response_1.status_code == 200
-        assert response_2.status_code == 200
-        assert response_1.json()["intent_id"] == response_2.json()["intent_id"], (
-            "Classifier produced different intent_id for identical inputs — "
-            "model is not in deterministic eval mode."
-        )
-
-    def test_classifier_covers_all_10_label_names(self, client: TestClient) -> None:
-        """
-        Verify that the model's id2label config exposes all 10 expected labels.
-        This guards against misconfigured or truncated model checkpoints.
-        """
-        # We verify indirectly: each expected label must be reachable as
-        # intent_label for at least the fixed-output intents.
-        camera_response = post_reformulate(client, "תצלמי תמונה")
-        flashlight_response = post_reformulate(client, "תדליקי את הפנס")
-        assert camera_response.json()["intent_label"] == "camera"
-        assert flashlight_response.json()["intent_label"] == "flashlight"
-
-    def test_reformulated_output_is_hebrew_text(self, client: TestClient) -> None:
-        """
-        The reformulated string should contain Hebrew Unicode characters.
-        Verifies the pipeline actually produces Hebrew output, not garbled ASCII.
-        """
-        response = post_reformulate(client, "תתקשרי לאמא שלי")
-        assert response.status_code == 200
-        reformulated = response.json()["reformulated"]
-        # Hebrew Unicode range: U+0590–U+05FF
-        has_hebrew = any("\u0590" <= ch <= "\u05FF" for ch in reformulated)
-        assert has_hebrew, (
-            f"Reformulated output contains no Hebrew characters: {reformulated!r}"
-        )
-
-
-# ===========================================================================
-# 4. Edge case tests
-# ===========================================================================
-
-class TestEdgeCases:
-    """
-    Verify the API handles unusual, malformed, or extreme inputs gracefully
-    without crashing or returning unexpected data.
-    """
-
-    def test_empty_string_returns_400(self, client: TestClient) -> None:
-        """
-        An empty utterance string must be rejected with HTTP 400.
-        The pipeline should never attempt NLP on a blank input.
-        """
-        response = post_reformulate(client, "")
-        assert response.status_code == 400, (
-            f"Expected 400 for empty string, got {response.status_code}"
-        )
-        assert "detail" in response.json()
-
-    def test_whitespace_only_returns_400(self, client: TestClient) -> None:
-        """
-        A string of only spaces/tabs/newlines must also be rejected with 400.
-        After stripping, the utterance is empty — same validation applies.
-        """
-        response = post_reformulate(client, "   \t\n  ")
-        assert response.status_code == 400, (
-            f"Expected 400 for whitespace-only input, got {response.status_code}"
-        )
-
-    def test_very_long_utterance_does_not_crash(self, client: TestClient) -> None:
-        """
-        An utterance of 2 000 Hebrew characters must not crash the server.
-        The tokenizer truncates inputs to BERT's 512-token maximum.
-        The response may be low quality but must be HTTP 200 with valid structure.
-        """
-        long_utterance = "תתקשרי לאמא שלי " * 120  # ~2 000 characters
-        response = post_reformulate(client, long_utterance)
-        assert response.status_code == 200, (
-            f"Very long input should not crash — got {response.status_code}"
-        )
-        assert_valid_response_structure(response.json())
-
-    def test_non_hebrew_english_text(self, client: TestClient) -> None:
-        """
-        An English utterance must not crash the server.
-        The model will classify it into one of the 10 intents (possibly with
-        low confidence), and the reformulation script will run. The output
-        quality is not verified — only that the pipeline completes without error.
-        """
-        response = post_reformulate(client, "call my mom please")
-        assert response.status_code == 200, (
-            f"English input should not crash — got {response.status_code}"
-        )
-        assert_valid_response_structure(response.json())
-
-    def test_mixed_hebrew_and_english(self, client: TestClient) -> None:
-        """
-        A mix of Hebrew and Latin characters must not crash the pipeline.
-        Common in Israeli text (e.g. brand names, abbreviations).
-        """
-        response = post_reformulate(client, "תתקשרי ל-David בבקשה")
-        assert response.status_code == 200, (
-            f"Mixed-language input should not crash — got {response.status_code}"
-        )
-        assert_valid_response_structure(response.json())
-
-    def test_special_characters_only(self, client: TestClient) -> None:
-        """
-        A string of only punctuation and special characters must not crash.
-        The classifier will produce some intent; the reformulation output
-        may be empty or minimal. The server must remain stable.
-        """
-        response = post_reformulate(client, "!@#$%^&*()")
-        assert response.status_code == 200, (
-            f"Special-character input should not crash — got {response.status_code}"
-        )
-        body = response.json()
-        # Structure must still be valid (reformulated may be empty string here)
-        assert "intent_id" in body
-        assert "intent_label" in body
-
-    def test_single_hebrew_word(self, client: TestClient) -> None:
-        """
-        A single Hebrew word must be processed without crashing.
-        This is a minimal valid input — no named entities will be found,
-        but the pipeline must complete gracefully.
-        """
-        response = post_reformulate(client, "שלום")
-        assert response.status_code == 200
-        assert_valid_response_structure(response.json())
-
-    def test_numbers_and_digits(self, client: TestClient) -> None:
-        """
-        An utterance containing digits (common in time/date commands) must
-        be handled correctly without crashing.
-        """
-        response = post_reformulate(client, "תעירי אותי ב-07:30")
-        assert response.status_code == 200
-        assert_valid_response_structure(response.json())
 
     def test_missing_utterance_field_returns_422(self, client: TestClient) -> None:
-        """
-        A request body missing the required 'utterance' field must return
-        HTTP 422 Unprocessable Entity (FastAPI's Pydantic validation error).
-        """
+        """A request body missing 'utterance' must return HTTP 422 (Pydantic validation)."""
         response = client.post("/reformulate", json={})
-        assert response.status_code == 422, (
-            f"Missing 'utterance' field should return 422, got {response.status_code}"
-        )
+        assert response.status_code == 422
 
     def test_wrong_field_name_returns_422(self, client: TestClient) -> None:
-        """
-        A request body with a misspelled field name ('text' instead of
-        'utterance') must return 422 — the required field is missing.
-        """
+        """'text' instead of 'utterance' means the required field is missing → 422."""
         response = client.post("/reformulate", json={"text": "תתקשרי לאמא"})
-        assert response.status_code == 422, (
-            f"Wrong field name should return 422, got {response.status_code}"
-        )
+        assert response.status_code == 422
+
+    def test_null_utterance_returns_422(self, client: TestClient) -> None:
+        """JSON null for 'utterance' must return 422 (Pydantic requires str)."""
+        response = client.post("/reformulate", json={"utterance": None})
+        assert response.status_code == 422
+
+    def test_get_on_reformulate_returns_405(self, client: TestClient) -> None:
+        """GET on /reformulate (POST-only) must return HTTP 405 Method Not Allowed."""
+        response = client.get("/reformulate")
+        assert response.status_code == 405
+
+    def test_unknown_route_returns_404(self, client: TestClient) -> None:
+        """A request to an undefined route must return HTTP 404 Not Found."""
+        response = client.get("/nonexistent-route")
+        assert response.status_code == 404
 
     def test_wrong_content_type_returns_error(self, client: TestClient) -> None:
-        """
-        Sending plain text instead of JSON must not crash the server.
-        FastAPI should return a 422 or 400 for non-JSON content.
-        """
+        """Sending plain text instead of JSON must return 400 or 422."""
         response = client.post(
             "/reformulate",
             content="תתקשרי לאמא שלי",
             headers={"Content-Type": "text/plain"},
         )
-        # FastAPI returns 422 for unparseable body
         assert response.status_code in (400, 422)
 
-    def test_null_utterance_returns_422(self, client: TestClient) -> None:
-        """
-        Sending JSON null for the utterance field must return 422.
-        Pydantic requires a string, not None.
-        """
-        response = client.post("/reformulate", json={"utterance": None})
-        assert response.status_code == 422
+    def test_400_error_body_uses_detail_key(self, client: TestClient) -> None:
+        """HTTP 400 error bodies must use FastAPI's standard 'detail' key."""
+        response = post(client, "")
+        assert response.status_code == 400
+        assert "detail" in response.json()
 
-    def test_numeric_utterance_is_coerced_or_rejected(self, client: TestClient) -> None:
-        """
-        Sending a JSON number instead of a string for 'utterance' must
-        either be coerced to string (Pydantic v2 behaviour) or return 422.
-        The server must not crash with an unhandled exception.
-        """
-        response = client.post("/reformulate", json={"utterance": 12345})
-        # Pydantic v2 coerces int → str; Pydantic v1 raises ValidationError → 422
-        assert response.status_code in (200, 422)
-
-    def test_unknown_endpoint_returns_404(self, client: TestClient) -> None:
-        """
-        A request to an undefined route must return HTTP 404 Not Found.
-        Verifies FastAPI's default 404 handling is working.
-        """
-        response = client.get("/nonexistent-route")
-        assert response.status_code == 404
-
-    def test_get_on_post_only_endpoint_returns_405(self, client: TestClient) -> None:
-        """
-        A GET request to /reformulate (which only accepts POST) must return
-        HTTP 405 Method Not Allowed.
-        """
-        response = client.get("/reformulate")
-        assert response.status_code == 405
+    def test_400_detail_is_generic_string(self, client: TestClient) -> None:
+        """The 400 detail message must be a plain string (not a nested object)."""
+        response = post(client, "hello world")
+        assert response.status_code == 400
+        assert isinstance(response.json()["detail"], str)
