@@ -13,6 +13,11 @@
  * Supported range: 0–999.
  *   Numbers outside this range are left unchanged as digit strings.
  *
+ * Number forms:
+ *   Teens (11–19) use feminine forms (e.g. "שתים עשרה", "ארבע עשרה") which
+ *   are the most natural and commonly understood standalone forms in
+ *   colloquial Israeli Hebrew.
+ *
  * Usage:
  *   import { normalizeNumbers } from './utils/normalizeNumbers'
  *   const normalized = normalizeNumbers("שלח הודעה ב 10 דקות")
@@ -37,18 +42,24 @@ const ONES = [
   'תשע',     // 9
 ]
 
-/** Hebrew words for 10–19. Index 0 = ten, index 9 = nineteen. */
+/**
+ * Hebrew words for 10–19 in feminine form.
+ * Feminine forms (עשרה suffix) are the standard standalone form in modern
+ * colloquial Hebrew and produce correct structure in compound numbers such as
+ * "חמש מאות וארבע עשרה" (514).
+ * Index 0 = ten (10), index 9 = nineteen (19).
+ */
 const TEENS = [
-  'עשר',          // 10
-  'אחד עשר',      // 11
-  'שניים עשר',    // 12
-  'שלוש עשר',     // 13
-  'ארבע עשר',     // 14
-  'חמש עשר',      // 15
-  'שש עשר',       // 16
-  'שבע עשר',      // 17
-  'שמונה עשר',    // 18
-  'תשע עשר',      // 19
+  'עשר',           // 10
+  'אחת עשרה',      // 11
+  'שתים עשרה',     // 12
+  'שלוש עשרה',     // 13
+  'ארבע עשרה',     // 14
+  'חמש עשרה',      // 15
+  'שש עשרה',       // 16
+  'שבע עשרה',      // 17
+  'שמונה עשרה',    // 18
+  'תשע עשרה',      // 19
 ]
 
 /** Hebrew words for multiples of ten: 20, 30, …, 90. */
@@ -73,9 +84,17 @@ const TENS = [
  * Convert a non-negative integer (0–999) to its Hebrew word representation.
  * Integers outside this range are returned as their original digit string.
  *
+ * Structure rules:
+ *   0         → אפס
+ *   1–9       → ONES table
+ *   10–19     → TEENS table (feminine forms)
+ *   20–99     → TENS + " ו" + ONES (e.g. "עשרים ושלוש")
+ *   100–999   → hundreds word + " ו" + recursive remainder
+ *               מאה (100), מאתיים (200), X מאות (300–900)
+ *
  * @param {number} n - A non-negative integer.
- * @returns {string} - Hebrew word(s) for the number, or the original numeral
- *                     string if n > 999.
+ * @returns {string} Hebrew word(s) for the number, or the original numeral
+ *                   string if n > 999.
  */
 function intToHebrew(n) {
   if (n === 0) return 'אפס'
@@ -83,22 +102,22 @@ function intToHebrew(n) {
   // 1–9
   if (n >= 1 && n <= 9) return ONES[n]
 
-  // 10–19
+  // 10–19: use feminine TEENS table
   if (n >= 10 && n <= 19) return TEENS[n - 10]
 
-  // 20–99: tens + optional ones joined with ו
+  // 20–99: tens word + optional " ו" + ones word
   if (n >= 20 && n <= 99) {
     const tensWord = TENS[Math.floor(n / 10)]
     const remainder = n % 10
     return remainder === 0 ? tensWord : `${tensWord} ו${ONES[remainder]}`
   }
 
-  // 100–999: hundreds + optional tens/ones
+  // 100–999: hundreds word + optional " ו" + recursive remainder
   if (n >= 100 && n <= 999) {
     const hundredsDigit = Math.floor(n / 100)
     const remainder = n % 100
 
-    // Hundred word: מאה (1), מאתיים (2), X מאות (3–9)
+    // Special forms for 100 and 200; general form for 300–900
     let hundredsWord
     if (hundredsDigit === 1) {
       hundredsWord = 'מאה'
@@ -126,17 +145,17 @@ function intToHebrew(n) {
  *
  * The replacement is performed left-to-right on each contiguous run of digits.
  * Non-digit characters (Hebrew letters, spaces, punctuation) are preserved
- * exactly as-is.
+ * exactly as-is — the cleanInput step that follows handles those.
  *
  * @param {string} text - The raw utterance entered by the user.
- * @returns {string} - The utterance with all digit sequences converted to
- *                     Hebrew words.
+ * @returns {string} The utterance with all digit sequences converted to
+ *                   Hebrew words.
  *
  * @example
- * normalizeNumbers("שעה 7")           // → "שעה שבע"
+ * normalizeNumbers("שעה 7")                // → "שעה שבע"
  * normalizeNumbers("שלח הודעה ב 10 דקות") // → "שלח הודעה ב עשר דקות"
- * normalizeNumbers("כנסו 3 אנשים")    // → "כנסו שלוש אנשים"
- * normalizeNumbers("שעה 7 ו30 דקות") // → "שעה שבע ושלושים דקות"
+ * normalizeNumbers("514")                  // → "חמש מאות וארבע עשרה"
+ * normalizeNumbers("שעה 7 ו30 דקות")      // → "שעה שבע ושלושים דקות"
  */
 export function normalizeNumbers(text) {
   // Match one or more consecutive digits anywhere in the string.
