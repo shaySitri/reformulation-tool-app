@@ -26,3 +26,10 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Runtime server logs (generated when running uvicorn/vite locally)
+server.log
+frontend-dev.log
+
+# Claude Code internal files
+.claude/
