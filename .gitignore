@@ -1,0 +1,28 @@
+# Large model binary files - store separately (e.g. HuggingFace Hub or shared drive)
+intent_model/model.safetensors
+intent_model/optimizer.pt
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
