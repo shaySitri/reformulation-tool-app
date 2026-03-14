@@ -32,7 +32,7 @@
 import { useState } from 'react'
 import CommandInput from './components/CommandInput.jsx'
 import ResultDisplay from './components/ResultDisplay.jsx'
-import { normalizeNumbers } from './utils/normalizeNumbers.js'
+import { preprocessInput } from './utils/preprocessInput.js'
 import styles from './App.module.css'
 
 /**
@@ -62,10 +62,11 @@ function App() {
     setError(false)
     setLoading(true)
 
-    // Preprocessing: convert any digit sequences to Hebrew words before
-    // sending to the backend. The input field is not mutated — the user
-    // always sees their original text. Example: "שעה 7" → "שעה שבע".
-    const processedUtterance = normalizeNumbers(utterance)
+    // Preprocessing: (1) convert digits to Hebrew words, then (2) strip any
+    // remaining characters the backend does not accept (English letters,
+    // punctuation, symbols). The input field is never mutated — the user
+    // always sees their original text.
+    const processedUtterance = preprocessInput(utterance)
 
     try {
       const response = await fetch('/api/reformulate', {

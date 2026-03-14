@@ -829,3 +829,134 @@ Build: ✓ 38 modules, 0 errors
 
 ### Notes
 voices.html removed. useTTS.js rate changed from 0.9 → 0.75. Build passes.
+
+---
+
+## Prompt 17 — 2026-03-14
+
+### User Prompt
+I found another issue in the frontend input preprocessing, and I want to refine the logic without replacing the existing behavior.
+
+Important clarification:
+Do not completely rewrite the current preprocessing flow, because we already added number normalization.
+Instead, extend the existing logic.
+
+What I want:
+
+1. Improve the existing number normalization step.
+
+The number normalization must correctly convert numbers into their Hebrew word form.
+
+Requirements for improvement:
+- correctly handle numbers with one digit, two digits, three digits, and more
+- ensure the correct Hebrew structure for hundreds, tens, and units
+- maintain the correct order of words in Hebrew numbers
+- avoid incorrect constructions such as:
+  514 → "עשר וארבע מאות חמש"
+
+Instead, the conversion should follow correct Hebrew number grammar.
+
+Example conversions to validate:
+1 → אחד
+12 → שתים עשרה
+23 → עשרים ושלוש
+105 → מאה וחמש
+514 → חמש מאות וארבע עשרה
+
+The exact gender form (זכר / נקבה) is not critical as long as the structure of the number is correct.
+
+2. Add an additional input cleaning step.
+
+Before sending the command to the backend, clean the user input.
+
+This cleaning step should remove characters that are not accepted by the backend, including:
+- English letters
+- invalid punctuation
+- any other unsupported characters
+
+Important:
+- Do not show an error for these characters.
+- Silently remove them before sending the request to the backend.
+
+3. Do not replace existing logic.
+
+The new cleaning logic must be added on top of the existing preprocessing flow (which already handles numbers).
+
+4. Validation.
+
+Validate that the preprocessing works correctly by testing:
+
+- mixed Hebrew + English input
+- input with punctuation
+- input with numbers
+- input containing invalid characters
+
+Confirm that:
+- valid Hebrew text remains unchanged
+- invalid characters are removed
+- numbers are converted correctly
+- the final cleaned text is the one actually sent to the backend.
+
+Show several before/after examples.
+
+5. After validation
+
+If everything works correctly:
+- commit and push the change
+- update prompts.md with the FULL prompt and the FULL response.
+
+Before implementing, briefly explain:
+- how the current preprocessing flow will be extended
+- where the cleaning step will be inserted
+- how the number normalization logic will be improved
+- which validation examples you will use.
+
+### Claude Response
+Pre-implementation explanation provided, then implemented.
+
+How the flow is extended:
+  utterance → normalizeNumbers() → cleanInput() → fetch
+  App.jsx now calls preprocessInput() which chains both steps.
+
+Number normalization fix:
+  Updated TEENS array in normalizeNumbers.js to feminine forms:
+  - 11: אחת עשרה (was אחד עשר)
+  - 12: שתים עשרה (was שניים עשר)
+  - 13: שלוש עשרה (was שלוש עשר)
+  - 14: ארבע עשרה (was ארבע עשר)
+  - 15: חמש עשרה (was חמש עשר)
+  - 16: שש עשרה (was שש עשר)
+  - 17: שבע עשרה (was שבע עשר)
+  - 18: שמונה עשרה (was שמונה עשר)
+  - 19: תשע עשרה (was תשע עשר)
+  This fixes 514 → חמש מאות וארבע עשרה (was חמש מאות וארבע עשר)
+
+Cleaning step:
+  cleanInput(text) in preprocessInput.js:
+  - regex: /[^\u05D0-\u05EA ]/g → replace with ''
+  - keeps only Hebrew letters (U+05D0–U+05EA) and ASCII space
+  - silently removes English letters, punctuation, digits that remain after
+    number normalization, and any other disallowed characters
+
+Files created/modified:
+  normalizeNumbers.js — updated TEENS to feminine forms
+  preprocessInput.js (NEW) — exports preprocessInput() chaining both steps
+  App.jsx — import changed from normalizeNumbers to preprocessInput
+
+Before/after validation results (11 cases, all correct):
+  "1"                → "אחד"
+  "12"               → "שתים עשרה"
+  "23"               → "עשרים ושלוש"
+  "105"              → "מאה וחמש"
+  "514"              → "חמש מאות וארבע עשרה"
+  "שלום hello"       → "שלום "
+  "תשלחי, הודעה!"   → "תשלחי הודעה"
+  "שעה 7"            → "שעה שבע"
+  "שעה 7 call mom!" → "שעה שבע  " (2 trailing spaces — harmless, backend strips)
+  "תתקשרי לאמא"     → "תתקשרי לאמא" (unchanged)
+  "תשלחי ל-דוד"     → "תשלחי לדוד"
+
+Build: ✓ 39 modules, 0 errors
+
+### Notes
+3 files changed. normalizeNumbers.js updated (TEENS feminine), preprocessInput.js created, App.jsx updated. Build passes.
