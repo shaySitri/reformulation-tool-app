@@ -14,3 +14,6 @@ A running log of all prompts used in this project's development conversation.
 
 **[3]**
 > I want to create a file that will store all the prompts i will use during the conversation. UPDATE the file, when you update, dont override its currnt content.
+
+**[4]**
+> You are a senior software engineer and AI systems engineer. We are going to build a real prototype application gradually and rigorously. [Full product vision prompt — architecture analysis requested: compare web app, iOS native, and other options across 6 criteria and recommend one. No code yet.]
