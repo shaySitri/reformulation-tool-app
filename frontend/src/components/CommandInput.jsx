@@ -2,7 +2,7 @@
  * CommandInput.jsx
  * ----------------
  * A controlled Hebrew text input with a submit button and an optional
- * microphone button for voice recording.
+ * microphone icon embedded inside the input field for voice recording.
  *
  * Props:
  *   utterance        {string}   - The current input value (controlled).
@@ -11,28 +11,30 @@
  *   loading          {boolean}  - When true, submit is disabled and shows a
  *                                 loading indicator.
  *   recording        {boolean}  - When true, the mic is active; input and submit
- *                                 are disabled, mic button shows stop state.
- *   onStartRecording {function} - Called when the user presses the mic button
+ *                                 are disabled, mic icon shows active/stop state.
+ *   onStartRecording {function} - Called when the user presses the mic icon
  *                                 while not recording.
- *   onStopRecording  {function} - Called when the user presses the mic button
+ *   onStopRecording  {function} - Called when the user presses the mic icon
  *                                 while recording.
- *   speechSupported  {boolean}  - When false, the mic button is not rendered.
+ *   speechSupported  {boolean}  - When false, the mic icon is not rendered.
  *                                 Older browsers that lack SpeechRecognition
  *                                 simply see the text-input-only interface.
  *
  * Design notes:
- *   - Full-width layout for easy touch targets on a phone.
+ *   - The mic icon sits inside the input field on the leading (right) edge,
+ *     using a position:relative wrapper + position:absolute icon button.
+ *     The input gains extra inline-start padding so text never overlaps the icon.
+ *   - During recording the icon turns red and pulses; the input border also
+ *     pulses red to reinforce that the mic is open.
  *   - Input and submit are disabled during recording — the user cannot submit
  *     while the mic is still open.
- *   - The mic button changes label and colour to give clear recording feedback.
- *   - The text field is always visible and editable when not recording, so the
- *     user can correct the transcription before submitting.
+ *   - A status hint below the input field tells the user recording is active.
  */
 
 import styles from './CommandInput.module.css'
 
 /**
- * CommandInput — Hebrew text field, submit button, and optional mic button.
+ * CommandInput — Hebrew text field with an embedded mic icon, and a submit button.
  *
  * @param {Object}   props
  * @param {string}   props.utterance        - Controlled input value.
@@ -85,26 +87,56 @@ function CommandInput({
         הקלד פקודה קולית בעברית
       </label>
 
-      {/* Hebrew text input */}
-      <input
-        id="utterance-input"
-        type="text"
-        className={`${styles.input} ${recording ? styles.inputRecording : ''}`}
-        value={utterance}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={
-          recording
-            ? 'מאזין... דברו בבקשה'
-            : 'לדוגמה: תשלחי הודעה לישראל שאני מאחרת'
-        }
-        lang="he"
-        inputMode="text"
-        autoComplete="off"
-        spellCheck={false}
-        disabled={inputDisabled}
-        aria-label="הקלד פקודה קולית בעברית"
-        aria-live={recording ? 'polite' : undefined}
-      />
+      {/*
+        Input wrapper — position:relative so the mic icon can be placed
+        absolutely inside the field on the leading (right) edge.
+      */}
+      <div className={styles.inputWrapper}>
+        <input
+          id="utterance-input"
+          type="text"
+          className={`${styles.input} ${recording ? styles.inputRecording : ''} ${speechSupported ? styles.inputWithMic : ''}`}
+          value={utterance}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={
+            recording
+              ? 'מאזין... דברו בבקשה'
+              : 'לדוגמה: תשלחי הודעה לישראל שאני מאחרת'
+          }
+          lang="he"
+          inputMode="text"
+          autoComplete="off"
+          spellCheck={false}
+          disabled={inputDisabled}
+          aria-label="הקלד פקודה קולית בעברית"
+          aria-live={recording ? 'polite' : undefined}
+        />
+
+        {/*
+          Mic icon button — absolutely positioned inside the input on the
+          right (RTL leading) edge. Visible only when SpeechRecognition
+          is available. Turns red and pulses while recording is active.
+        */}
+        {speechSupported && (
+          <button
+            type="button"
+            className={`${styles.micIcon} ${recording ? styles.micIconRecording : ''}`}
+            onClick={handleMicClick}
+            disabled={loading}
+            aria-label={recording ? 'עצור הקלטה' : 'התחל הקלטה קולית'}
+            aria-pressed={recording}
+          >
+            {recording ? '⏹' : '🎙'}
+          </button>
+        )}
+      </div>
+
+      {/* Recording status line — visible only while mic is active */}
+      {recording && (
+        <p className={styles.recordingHint} role="status" aria-live="polite">
+          ההקלטה פעילה. לחצו על הסמל לעצירה (עד 30 שניות).
+        </p>
+      )}
 
       {/* Submit button */}
       <button
@@ -115,30 +147,6 @@ function CommandInput({
       >
         {loading ? 'שולח...' : 'שלח פקודה'}
       </button>
-
-      {/*
-        Microphone button — rendered only when SpeechRecognition is available.
-        Changes appearance while recording to give clear visual feedback.
-      */}
-      {speechSupported && (
-        <button
-          type="button"
-          className={`${styles.micButton} ${recording ? styles.micButtonRecording : ''}`}
-          onClick={handleMicClick}
-          disabled={loading}
-          aria-label={recording ? 'עצור הקלטה' : 'התחל הקלטה קולית'}
-          aria-pressed={recording}
-        >
-          {recording ? '⏹ עצור הקלטה' : '🎙 הקלטה קולית'}
-        </button>
-      )}
-
-      {/* Recording status line — visible only while mic is active */}
-      {recording && (
-        <p className={styles.recordingHint} role="status" aria-live="polite">
-          ההקלטה פעילה. לחצו על "עצור הקלטה" לסיום (עד 30 שניות).
-        </p>
-      )}
     </form>
   )
 }
