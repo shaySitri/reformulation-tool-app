@@ -1316,3 +1316,173 @@ frontend/src/App.module.css
   - .resultArea: margin-top 0.75rem
 
 Documented prompts 20–25 in prompts.md and pushed all commits.
+
+---
+
+## Prompt 26 — 2026-03-14
+
+### User Prompt
+I want to improve the UI design.
+
+The current interface works well functionally, but visually it is not very impressive.
+
+Please suggest several design improvements that will make the interface prettier while still remaining very user-friendly for older adults.
+
+Requirements:
+- keep the interface simple and uncluttered
+- maintain large readable text
+- keep strong contrast for accessibility
+- do not remove existing functionality
+
+Please propose:
+- 2–3 different UI design directions
+- suggested color palette
+- font suggestions that support Hebrew well
+- layout improvements
+
+In addition, suggest a few simple logo ideas for the application that can also be used as the browser icon (favicon).
+
+The logo should:
+- be simple and recognizable
+- relate to voice or communication with Siri
+- be clear even in small sizes
+
+Do not implement yet — first show the design suggestions.
+
+### Assistant Response
+
+Proposed three design directions:
+
+**Direction 1 — "Calm & Clear" (Soft Blue)**
+- Colors: page #F7F9FC gradient, card white, primary #2563EB, accent teal #0D9488, text #1E293B
+- Font: Heebo (title) + Rubik (body)
+- Layout: border-radius 20px, blue-tinted shadow, instructions as right border stripe
+
+**Direction 2 — "Warm & Inviting" (Amber + Deep Navy)**
+- Colors: page #FFFBF2, card white with 4px amber top border, primary #1E3A5F, accent #D97706
+- Font: Heebo (title) + Assistant (body)
+- Layout: amber-tinted result area, RTL accent stripe on result card
+
+**Direction 3 — "High Contrast Accessible" (Dark Theme)**
+- Colors: page #0F172A, card #1E293B, primary #3B82F6, accent emerald #059669, text #F1F5F9
+- Font: Heebo (title) + Noto Sans Hebrew (body)
+- Layout: border-defined card, no shadows
+
+**Logo ideas (A/B/C):** microphone in speech bubble / Hebrew ק with sound waves / stylized mic squircle.
+User did not like these logo suggestions.
+
+---
+
+## Prompt 27 — 2026-03-14
+
+### User Prompt
+Please proceed with the UI redesign suggestions.
+
+1. Create demo pages for the three design options you suggested.
+These pages should demonstrate only the visual design.
+There is no need to implement any routing or backend logic.
+
+Each demo page should show:
+- the layout
+- colors
+- typography
+- buttons
+- input field
+- microphone icon
+- overall visual style
+
+The goal is to compare the different UI designs.
+
+2. Logo / favicon
+
+I did not like the previous icon suggestions.
+
+Please suggest a few new logo ideas that represent an older user interacting with voice technology.
+
+Requirements:
+- simple and recognizable
+- suitable for a browser favicon
+- visually friendly and clear
+- related to voice interaction or speaking to Siri
+
+Briefly describe each logo idea and its visual concept.
+
+Do not integrate the logo into the UI yet. First show the design ideas.
+
+### Assistant Response
+
+Created three standalone HTML demo pages in `demos/`:
+- `demos/direction1-calm-blue.html` — Rubik font, blue gradient, border stripe instructions, teal result card
+- `demos/direction2-warm-amber.html` — Assistant font, warm cream background, amber top border, navy buttons
+- `demos/direction3-dark.html` — Noto Sans Hebrew, dark navy background, high contrast, border-only card
+
+Each page shows: header, instructions, input+mic icon, recording hint, result card, send/reset buttons.
+
+New logo ideas proposed:
+- **Idea A — Speaking silhouette**: head-and-shoulders outline with sound-wave arcs from the mouth
+- **Idea B — Ear + waveform**: simple ear shape with horizontal waves going into it
+- **Idea C — Speech bubble with waveform**: rounded speech bubble containing 3–5 vertical audio bars
+- **Idea D — Phone with Siri waves**: smartphone silhouette with circular waves from the screen
+
+---
+
+## Prompt 28 — 2026-03-14
+
+### User Prompt
+For now, we will continue with Direction 1 — Calm & Clear.
+
+### Assistant Response
+
+Confirmed Direction 1 choice. Asked for approval to implement.
+
+---
+
+## Prompt 29 — 2026-03-14
+
+### User Prompt
+Yes
+
+### Assistant Response
+
+Applied Direction 1 (Calm & Clear) design to the React app. Files changed:
+
+frontend/index.html
+  - Added Rubik font (weights 400/500/600/700) to Google Fonts link
+
+frontend/src/index.css
+  - Body font: Rubik, 'Arial Hebrew', Arial
+  - Base color: #1E293B
+  - Background: linear-gradient(160deg, #EEF2FF 0%, #F7F9FC 40%) fixed
+
+frontend/src/App.module.css
+  - Card: border-radius 20px, box-shadow with blue tint rgba(37,99,235,0.07)
+  - Instructions: border-right 4px solid #2563EB on #F8FAFF background (stripe style)
+  - instructionsTitle color: #2563EB; li color: #334155
+  - Reset button: border #CBD5E1, color #64748B, border-radius 12px
+
+frontend/src/components/CommandInput.module.css
+  - Input: border #CBD5E1, border-radius 12px, focus #2563EB
+  - Input disabled: background #F1F5F9, color #94A3B8
+  - Submit button: #2563EB, border-radius 12px, box-shadow 0 3px 12px rgba(37,99,235,0.30)
+  - Mic icon hover: #2563EB, rgba(37,99,235,0.08)
+
+frontend/src/components/ResultDisplay.module.css
+  - successCard: background #F0FDF9, border #99F6E4
+  - resultLabel: color #0F766E
+  - resultText: color #134E4A
+  - TTS button: color #0D9488, border #0D9488, white bg; fills teal on hover
+
+Commit: `07a3ee3` pushed to GitHub.
+
+---
+
+## Prompt 30 — 2026-03-14
+
+### User Prompt
+remove demo folder, update the prompts file and push changes.
+
+### Assistant Response
+
+- Removed `demos/` folder (3 HTML files deleted)
+- Updated prompts.md with full entries for prompts 26–30
+- Committed and pushed
