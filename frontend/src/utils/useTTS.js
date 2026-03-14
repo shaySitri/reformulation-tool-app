@@ -26,6 +26,16 @@
  *   If no Hebrew voice is found, lang = 'he-IL' is still set and the browser
  *   uses its best fallback. The button remains functional regardless.
  *
+ *   On this device only one Hebrew voice is available; it is selected
+ *   automatically. No manual voice selection is needed.
+ *
+ * Pacing for older adults:
+ *   rate   = 0.75  — noticeably slower than the default (1.0), giving the
+ *                    listener time to absorb each word
+ *   pitch  = 1.0   — natural pitch; lowering it can make speech harder to
+ *                    follow for hearing-impaired users
+ *   volume = 1.0   — full volume
+ *
  * Usage:
  *   const { speak, speaking } = useTTS()
  *   speak("תפתחי מצלמה")   // reads the text aloud
@@ -90,8 +100,13 @@ export function useTTS() {
         utterance.voice = hebrewVoice
       }
 
-      // Slightly slower rate for older adults — 0.9 instead of the default 1.0.
-      utterance.rate = 0.9
+      // Slower rate for older adults: 0.75 gives noticeably more time between
+      // words without sounding unnatural. Default is 1.0.
+      utterance.rate   = 0.75
+      // Natural pitch — keep at 1.0 to avoid distortion that reduces clarity.
+      utterance.pitch  = 1.0
+      // Full volume for comfortable listening in any environment.
+      utterance.volume = 1.0
 
       utterance.onstart = () => setSpeaking(true)
       utterance.onend = () => setSpeaking(false)

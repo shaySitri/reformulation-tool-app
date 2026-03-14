@@ -796,3 +796,36 @@ Build: ✓ 38 modules, 0 errors
 
 ### Notes
 4 commits pushed to GitHub. No backend changes.
+
+---
+
+## Prompt 16 — 2026-03-14
+
+### User Prompt
+Make the read-aloud option slower and adapted for older adults.
+
+Requirements:
+- Use a slower speaking rate so the command is easy to understand.
+- Prefer a clear and natural Hebrew voice if available.
+- Ensure the pronunciation is clear and easy to follow.
+- Keep the volume and pacing comfortable for older users.
+
+Before implementing, first show the available voices detected in the browser and let me choose which voice should be used.
+Do not implement the TTS until I approve the selected voice.
+
+### Claude Response
+Created frontend/public/voices.html — a diagnostic page served at http://localhost:5173/voices.html. Listed all available SpeechSynthesisVoice objects with name, language, on-device vs network, and a Play button to preview each voice. Hebrew voices highlighted in green.
+
+User confirmed only 1 Hebrew voice is available, so no selection is needed.
+User approved proceeding and asked to remove voices.html.
+
+Actions taken:
+- Deleted frontend/public/voices.html
+- Updated useTTS.js: rate = 0.75 (down from 0.9), pitch = 1.0, volume = 1.0
+  with explanatory comments for each parameter choice
+- Updated the module docstring to document the pacing rationale
+
+Build: ✓ 38 modules, 0 errors
+
+### Notes
+voices.html removed. useTTS.js rate changed from 0.9 → 0.75. Build passes.
