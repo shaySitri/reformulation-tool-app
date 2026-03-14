@@ -1,0 +1,125 @@
+/*
+ * App.module.css
+ * --------------
+ * Layout and chrome styles for the root App component.
+ *
+ * The page is a single centered column with a white card containing the
+ * input and result. This is deliberately simple — one task per screen,
+ * no clutter, large targets.
+ */
+
+/* Full-page column — vertically starts near top, horizontally centered */
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2.5rem 1.25rem 3rem;
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+/* App header */
+.header {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+/* App title — Heebo loaded via Google Fonts in index.html */
+.title {
+  margin: 0 0 0.5rem 0;
+  font-family: 'Heebo', 'Arial Hebrew', Arial, sans-serif;
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #1a1a2e;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+/* Subtitle / instruction line */
+.subtitle {
+  margin: 0;
+  font-size: 1rem;
+  color: #5d6d7e;
+  line-height: 1.5;
+}
+
+/* Usage instructions box — sits inside the card above the input */
+.instructions {
+  background-color: #f0f4ff;
+  border: 1px solid #d0d9f5;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.instructionsTitle {
+  margin: 0 0 0.6rem 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #2c3e6b;
+}
+
+.instructionsList {
+  margin: 0;
+  /* RTL ordered list: indent from the right to make room for numbers */
+  padding: 0 1.4rem 0 0;
+  list-style-type: decimal;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.instructionsList li {
+  font-size: 0.95rem;
+  color: #3a4a6b;
+  line-height: 1.5;
+}
+
+/* Reset button — secondary ghost style, appears below result/error */
+.resetButton {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  font-family: inherit;
+  font-weight: 600;
+  color: #5d6d7e;
+  background-color: transparent;
+  border: 2px solid #bdc3c7;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+  min-height: 50px;
+}
+
+.resetButton:hover {
+  border-color: #7f8c8d;
+  color: #2c3e50;
+}
+
+.resetButton:focus-visible {
+  outline: 3px solid #1a56db;
+  outline-offset: 3px;
+}
+
+/* White content card — contains the input and result */
+.card {
+  width: 100%;
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 2rem 1.75rem;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.07),
+    0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Gap between the form and the result card */
+.resultArea {
+  margin-top: 1.5rem;
+}

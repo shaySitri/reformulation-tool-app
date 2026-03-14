@@ -1,0 +1,47 @@
+/*
+ * index.css
+ * ---------
+ * Global base styles for the Hebrew Voice Command Reformulation UI.
+ *
+ * Design goals:
+ *   - High-contrast light theme (no dark mode in this prototype)
+ *   - Hebrew system font stack for best platform rendering
+ *   - Generous base font size (20px) for readability by older adults
+ *   - RTL layout is handled by <html dir="rtl"> in index.html
+ */
+
+:root {
+  /* Typography */
+  font-family: 'Arial Hebrew', Arial, 'Helvetica Neue', Helvetica, sans-serif;
+  font-size: 20px;
+  line-height: 1.6;
+  font-weight: 400;
+
+  /* Colour palette */
+  color: #1a1a2e;
+  background-color: #f4f6f9;
+
+  /* Smooth text rendering */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background-color: #f4f6f9;
+}
+
+#root {
+  width: 100%;
+}

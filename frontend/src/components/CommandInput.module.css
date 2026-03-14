@@ -1,0 +1,94 @@
+/*
+ * CommandInput.module.css
+ * -----------------------
+ * Styles for the CommandInput component.
+ *
+ * All sizes use rem so they scale with the 20px base font set in index.css.
+ * Touch targets are sized to at least 52–58px tall to meet WCAG 2.5.5
+ * and Apple HIG guidelines for older-adult usability.
+ */
+
+/* Wrapper form — single column, full width */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+/* Section label */
+.label {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 0.25rem;
+}
+
+/* Hebrew text input */
+.input {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  font-size: 1.1rem;
+  font-family: inherit;
+  color: #1a1a2e;
+  background-color: #ffffff;
+  border: 2px solid #bdc3c7;
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.2s ease;
+  /* Minimum height for comfortable touch target */
+  min-height: 54px;
+  /* RTL is inherited from <html dir="rtl"> */
+}
+
+.input::placeholder {
+  color: #95a5a6;
+}
+
+.input:focus {
+  border-color: #1a56db;
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.15);
+}
+
+.input:disabled {
+  background-color: #ecf0f1;
+  color: #7f8c8d;
+  cursor: not-allowed;
+}
+
+/* Submit button */
+.button {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.2rem;
+  font-family: inherit;
+  font-weight: 700;
+  color: #ffffff;
+  background-color: #1a56db;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  /* Minimum height for comfortable touch target */
+  min-height: 58px;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+  letter-spacing: 0.02em;
+}
+
+.button:hover:not(:disabled) {
+  background-color: #1648c0;
+}
+
+.button:active:not(:disabled) {
+  background-color: #123ba3;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Focus ring for keyboard navigation */
+.button:focus-visible {
+  outline: 3px solid #1a56db;
+  outline-offset: 3px;
+}

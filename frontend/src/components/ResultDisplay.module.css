@@ -1,0 +1,75 @@
+/*
+ * ResultDisplay.module.css
+ * ------------------------
+ * Styles for the ResultDisplay component.
+ *
+ * Two visual states:
+ *   .successCard — light green background, dark green text (success result)
+ *   .errorCard   — light red background, dark red text (any failure)
+ *
+ * Both states use a card layout with a clear visual boundary so that the
+ * result area is easy to distinguish from the input area.
+ */
+
+/* Shared card shell */
+.card {
+  width: 100%;
+  padding: 1.5rem 1.25rem;
+  border-radius: 12px;
+  border-width: 1.5px;
+  border-style: solid;
+  /* Animate in from slight offset for gentle feedback */
+  animation: slideIn 0.25s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Success state — green tones */
+.successCard {
+  background-color: #f0fdf4;
+  border-color: #86efac;
+}
+
+/* Error state — red tones */
+.errorCard {
+  background-color: #fef2f2;
+  border-color: #fca5a5;
+}
+
+/* Instruction sentence shown above the reformulated command */
+.resultLabel {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #166534;
+  line-height: 1.5;
+}
+
+/* The reformulated command — large and prominent */
+.resultText {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #14532d;
+  line-height: 1.4;
+  /* Wrap gracefully for long commands */
+  word-break: break-word;
+}
+
+/* Generic error message */
+.errorText {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #991b1b;
+  line-height: 1.5;
+}
