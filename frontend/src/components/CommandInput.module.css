@@ -35,7 +35,7 @@
   border: 2px solid #bdc3c7;
   border-radius: 10px;
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   /* Minimum height for comfortable touch target */
   min-height: 54px;
   /* RTL is inherited from <html dir="rtl"> */
@@ -54,6 +54,21 @@
   background-color: #ecf0f1;
   color: #7f8c8d;
   cursor: not-allowed;
+}
+
+/*
+ * Recording state: input gets a red border and subtle pulsing animation to
+ * communicate clearly to older adults that the microphone is listening.
+ */
+.inputRecording {
+  border-color: #e53e3e;
+  box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.15);
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.15); }
+  50%       { box-shadow: 0 0 0 6px rgba(229, 62, 62, 0.08); }
 }
 
 /* Submit button */
@@ -91,4 +106,66 @@
 .button:focus-visible {
   outline: 3px solid #1a56db;
   outline-offset: 3px;
+}
+
+/*
+ * Microphone button — secondary outlined style so it is visually distinct
+ * from the primary submit button. Full width and large touch target.
+ */
+.micButton {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  font-size: 1.1rem;
+  font-family: inherit;
+  font-weight: 600;
+  color: #2c3e50;
+  background-color: #f4f6f9;
+  border: 2px solid #bdc3c7;
+  border-radius: 10px;
+  cursor: pointer;
+  min-height: 54px;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.micButton:hover:not(:disabled) {
+  background-color: #e8ecf0;
+  border-color: #95a5a6;
+}
+
+.micButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.micButton:focus-visible {
+  outline: 3px solid #1a56db;
+  outline-offset: 3px;
+}
+
+/*
+ * Recording active state: mic button turns red so the user knows the
+ * microphone is currently open. A clear, unambiguous signal.
+ */
+.micButtonRecording {
+  color: #ffffff;
+  background-color: #e53e3e;
+  border-color: #c53030;
+}
+
+.micButtonRecording:hover:not(:disabled) {
+  background-color: #c53030;
+  border-color: #9b2c2c;
+}
+
+/*
+ * Recording hint text shown below the mic button while recording is active.
+ * Small, muted, informational — tells the user the time limit.
+ */
+.recordingHint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #c53030;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.5;
 }
