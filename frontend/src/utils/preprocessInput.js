@@ -13,7 +13,14 @@
  *     in the cleaning step.
  *     e.g. "שעה 7" → "שעה שבע"
  *
- *   Step 2 — cleanInput(text)
+ *   Step 2 — removeSiri(text)
+ *     Removes the word "סירי" (and surrounding whitespace) from the text.
+ *     Users commonly address Siri by name at the start of a command; the
+ *     backend pipeline does not expect it and may misclassify the intent.
+ *     The word is removed silently — the visible input field is never changed.
+ *     e.g. "סירי תשלחי הודעה לאמא" → "תשלחי הודעה לאמא"
+ *
+ *   Step 3 — cleanInput(text)
  *     Removes any character that the backend rejects.
  *     The backend accepts only Hebrew letters (U+05D0–U+05EA) and ASCII space.
  *     Everything else — English letters, punctuation, symbols — is silently
@@ -30,7 +37,34 @@
 import { normalizeNumbers } from './normalizeNumbers.js'
 
 // ---------------------------------------------------------------------------
-// Step 2 — character cleaning
+// Step 2 — remove "סירי"
+// ---------------------------------------------------------------------------
+
+/**
+ * Remove the word "סירי" wherever it appears in the text.
+ *
+ * Users commonly say "סירי" at the start (or anywhere) of a command because
+ * they are used to addressing Siri by name. The backend pipeline does not
+ * expect the wake word and may misclassify the intent if it is present.
+ *
+ * The regex matches "סירי" surrounded by optional whitespace and collapses
+ * any extra spaces that result from the removal so the backend receives
+ * clean, single-spaced Hebrew text.
+ *
+ * @param {string} text - Text after number normalization.
+ * @returns {string} Text with "סירי" removed and whitespace normalized.
+ *
+ * @example
+ * removeSiri("סירי תשלחי הודעה לאמא")   // → "תשלחי הודעה לאמא"
+ * removeSiri("תשלחי סירי הודעה")         // → "תשלחי הודעה"
+ * removeSiri("תתקשרי לאמא")             // → "תתקשרי לאמא"  (unchanged)
+ */
+function removeSiri(text) {
+  return text.replace(/\s*סירי\s*/g, ' ').trim()
+}
+
+// ---------------------------------------------------------------------------
+// Step 3 — character cleaning
 // ---------------------------------------------------------------------------
 
 /**
@@ -66,21 +100,23 @@ function cleanInput(text) {
  *
  * Steps applied (in order):
  *   1. normalizeNumbers — digits → Hebrew words
- *   2. cleanInput       — strip any remaining disallowed characters
+ *   2. removeSiri       — strip the wake word "סירי" if present
+ *   3. cleanInput       — strip any remaining disallowed characters
  *
  * @param {string} utterance - The raw text typed by the user.
  * @returns {string} The cleaned, normalised string ready for the backend.
  *
  * @example
- * preprocessInput("שעה 7")              // → "שעה שבע"
- * preprocessInput("514")                // → "חמש מאות וארבע עשרה"
- * preprocessInput("שלום hello")         // → "שלום "
- * preprocessInput("תשלחי, הודעה!")      // → "תשלחי הודעה"
- * preprocessInput("שעה 7 call mom!")    // → "שעה שבע "
- * preprocessInput("תתקשרי לאמא")       // → "תתקשרי לאמא"
+ * preprocessInput("שעה 7")                      // → "שעה שבע"
+ * preprocessInput("514")                        // → "חמש מאות וארבע עשרה"
+ * preprocessInput("סירי תשלחי הודעה לאמא")     // → "תשלחי הודעה לאמא"
+ * preprocessInput("שלום hello")                 // → "שלום "
+ * preprocessInput("תשלחי, הודעה!")              // → "תשלחי הודעה"
+ * preprocessInput("תתקשרי לאמא")               // → "תתקשרי לאמא"
  */
 export function preprocessInput(utterance) {
   const afterNumbers = normalizeNumbers(utterance)
-  const afterClean   = cleanInput(afterNumbers)
+  const afterSiri    = removeSiri(afterNumbers)
+  const afterClean   = cleanInput(afterSiri)
   return afterClean
 }
