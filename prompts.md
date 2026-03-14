@@ -724,3 +724,75 @@ Build: ✓ 37 modules, 0 errors
 
 ### Notes
 normalizeNumbers utility created. App.jsx updated with preprocessing and new instruction text. CSS updated for RTL decimal list. Build passes.
+
+---
+
+## Prompt 15 — 2026-03-14
+
+### User Prompt
+Next step: add an option to read the corrected command aloud.
+
+Requirements:
+
+1. Add a button that allows the user to hear the corrected command using text-to-speech (TTS).
+
+2. The TTS should run in the frontend (for example using the browser Web Speech API) and should read the reformulated command that was returned from the backend.
+
+3. The button should appear only when a valid corrected command is displayed.
+
+4. When the user presses the button, the system should read the corrected command aloud.
+
+5. Update the usage instructions in the interface to explain this option to the user.
+
+The instructions should now include something like:
+
+1. הקלידו את הבקשה שלכם בתיבה.
+2. לחצו על כפתור השליחה.
+3. הפעילו את סירי ואמרו לה את הפקודה המתוקנת או לחצו על כפתור ההקראה כדי להשמיע לסירי את הפקודה.
+
+Keep the interface simple, clear, and friendly for older adults.
+
+Before implementing, briefly explain:
+
+- how the TTS will be implemented
+- which browser TTS options are available
+- whether a specific voice can be selected
+- whether a Hebrew voice is available
+- where the button will appear in the UI
+
+### Claude Response
+Pre-implementation explanation provided:
+
+- TTS: browser-native Web Speech API (SpeechSynthesis), no external service
+- utterance.lang = 'he-IL' set always; speechSynthesis.getVoices() filtered for lang.startsWith('he')
+- Hebrew voice availability: built-in on iOS Safari (primary target); varies on Windows Chrome
+- Button placement: inside ResultDisplay success card, below result text, only when result !== null
+- useTTS hook owns all TTS state; ResultDisplay uses it internally
+
+Files created/modified:
+
+frontend/src/utils/useTTS.js (NEW)
+- Custom React hook: speak(text) + speaking boolean
+- Loads voices via voiceschanged event (async on most browsers)
+- Sets lang='he-IL', picks first Hebrew voice if available, rate=0.9
+- Cancels prior speech before starting new utterance
+
+frontend/src/components/ResultDisplay.jsx
+- Imports useTTS(); calls speak(result) on button click
+- Button label: '🔊 הקראת הפקודה' (idle) / '🔊 מקריא...' (speaking)
+- Button disabled while speaking; aria-label set
+- resultLabel simplified to 'הפקודה המתוקנת:'
+- TTS button hidden on error card
+
+frontend/src/components/ResultDisplay.module.css
+- Added .ttsButton: full-width, 52px min-height, teal/green tones matching
+  the success card, hover/active/disabled/focus-visible states
+
+frontend/src/App.jsx
+- Step 3 updated: 'הפעילו את סירי ואמרו לה את הפקודה המתוקנת, או לחצו
+  על כפתור ההקראה כדי להשמיע אותה.'
+
+Build: ✓ 38 modules, 0 errors
+
+### Notes
+4 commits pushed to GitHub. No backend changes.
