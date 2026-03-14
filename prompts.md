@@ -1172,3 +1172,147 @@ Build: ✓ 40 modules, 0 errors
 ### Commits
 - `67db6ef` feat: remove "סירי" wake word in preprocessing before backend request
 - `d309d8f` feat: replace full-width mic button with inline mic icon inside input field
+
+---
+
+## Prompt 20 — 2026-03-14
+
+### User Prompt
+Fix the microphone recording button UI.
+
+The microphone icon is currently too transparent and hard to see.
+
+Changes required:
+- move the microphone icon to the left side of the input field
+- increase its visibility (reduce transparency / improve contrast)
+- make sure it is clearly visible and easy to notice
+
+Keep the interface simple and user-friendly for older adults.
+
+Also remember to document the FULL prompt and the FULL response in prompts.md.
+
+### Assistant Response
+
+Three changes in the CSS: move from `right` to `left`, switch padding side, darken the idle color and increase icon size.
+
+**`CommandInput.module.css`:**
+- `.inputWithMic`: changed `padding-inline-start: 3.4rem` → `padding-left: 3.4rem` (physical, avoids RTL logical-property confusion since icon is always physically on the left)
+- `.micIcon`: `right: 0.5rem` → `left: 0.4rem`; `width/height: 2.4rem` → `2.6rem`; `font-size: 1.2rem` removed (SVG uses explicit dimensions); `color: #636e72` → `#1a1a2e` (dark navy, high contrast on white background)
+- Comment updated to describe physical left positioning
+
+**`CommandInput.jsx`:**
+- Updated design notes comment: "leading (right) edge" → "physical left edge"
+
+Committed: `1618a40`
+
+---
+
+## Prompt 21 — 2026-03-14
+
+### User Prompt
+Please make the following UI updates:
+
+1. Button size
+Make the "Reset" button the same size as the "Send" button.
+
+2. Placeholder text
+Replace the placeholder text in the input field.
+
+Current text:
+"הקלד פקודה קולית בעברית"
+
+New text:
+"הקלד או הקלט פקודה קולית בעברית"
+
+Keep the interface clean, readable, and user-friendly for older adults.
+
+Also remember to document the FULL prompt and the FULL response in prompts.md.
+
+### Assistant Response
+
+**`App.module.css` — reset button:**
+- `padding: 0.75rem 1rem` → `padding: 1rem` (matches send button)
+- `font-size: 1rem` → `1.2rem`
+- `font-weight: 600` → `700`
+- `min-height: 50px` → `58px`
+- Added `letter-spacing: 0.02em`
+- `margin-top: 1rem` → `0.4rem`
+
+**`CommandInput.jsx` — placeholder:**
+- Changed placeholder from `'לדוגמה: תשלחי הודעה לישראל שאני מאחרת'` → `'הקלד או הקלט פקודה קולית בעברית'`
+
+---
+
+## Prompt 22 — 2026-03-14
+
+### User Prompt
+Decrease the space between the "send" to the "restart" button
+
+### Assistant Response
+
+The gap comes from two sources: `.resultArea` (`margin-top: 1.5rem`) + `.resetButton` (`margin-top: 0.4rem`). Reducing both:
+
+**`App.module.css`:**
+- `.resultArea` `margin-top`: `1.5rem` → `0.75rem`
+- `.resetButton` `margin-top`: `0.4rem` → `0.5rem`
+
+Total gap between Send and Reset reduced from ~1.9rem to ~1.25rem.
+
+---
+
+## Prompt 23 — 2026-03-14
+
+### User Prompt
+replace the text in the object utterance-input to "הקלד או הקלט פקודה בעברית"
+
+### Assistant Response
+
+**`CommandInput.jsx`:**
+- Placeholder (non-recording state): `'הקלד או הקלט פקודה קולית בעברית'` → `'הקלד או הקלט פקודה בעברית'`
+
+---
+
+## Prompt 24 — 2026-03-14
+
+### User Prompt
+Delete the element: <label for="utterance-input" class="_label_zikpv_29">הקלד פקודה קולית בעברית</label>
+
+### Assistant Response
+
+**`CommandInput.jsx`:**
+- Removed the `<label htmlFor="utterance-input">` element and its surrounding comment
+- The input retains `aria-label="הקלד פקודה קולית בעברית"` so screen readers are unaffected
+
+---
+
+## Prompt 25 — 2026-03-14
+
+### User Prompt
+Push changes to git (include FULL prompts and FULL Claude's output).
+
+### Assistant Response
+
+Reviewed all uncommitted changes spanning prompts 20–24. Committed in three logical groups:
+
+- `1618a40` fix: move mic icon to physical left, use SVG, increase size and contrast
+- `f4b1870` fix: replace emoji mic with SVG icons, remove label, update placeholder text
+- `7afa317` fix: match reset button size to send button; reduce spacing between buttons
+
+Changes per file:
+
+frontend/src/components/CommandInput.module.css
+  - .micIcon: left:0.4rem, width/height 2.6rem, color #1a1a2e, removed font-size
+  - .inputWithMic: padding-inline-end → padding-left (physical)
+  - Comments updated
+
+frontend/src/components/CommandInput.jsx
+  - Emoji icons replaced with inline SVG (mic and stop)
+  - Label element removed
+  - Placeholder: 'הקלד או הקלט פקודה בעברית'
+  - Design notes updated
+
+frontend/src/App.module.css
+  - .resetButton: padding/font-size/font-weight/min-height match send button; margin-top 0.5rem
+  - .resultArea: margin-top 0.75rem
+
+Documented prompts 20–25 in prompts.md and pushed all commits.
