@@ -1,0 +1,23 @@
+# =============================================================================
+# Hebrew Voice Command Reformulation — Python dependencies
+# =============================================================================
+# Install with:  pip install -r requirements.txt
+# Tested with:   Python 3.10+
+
+# --- Web framework ---
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0      # ASGI server for running FastAPI locally
+
+# --- Existing NLP pipeline dependencies (do not remove or downgrade) ---
+transformers==4.44.2            # HuggingFace Transformers (BERT, pipelines)
+                                # Pinned to 4.44.2: transformers 5.x adds a new modeling_layers.py
+                                # abstraction that deepens the call stack beyond Windows thread
+                                # limits (1MB default), causing STATUS_GUARD_PAGE_VIOLATION crashes.
+torch>=2.0.0                    # PyTorch (model inference)
+tokenizers>=0.19.0              # Fast tokenizers (used by heBERT / dictabert)
+python-Levenshtein>=0.25.0      # Edit-distance matching in reformulation script
+pandas>=2.0.0                   # Imported by reformulation script (currently unused)
+
+# --- Testing ---
+httpx>=0.27.0                   # Required by FastAPI TestClient
+pytest>=8.0.0                   # Test runner
