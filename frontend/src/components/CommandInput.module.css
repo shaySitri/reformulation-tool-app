@@ -1,53 +1,38 @@
 /*
  * CommandInput.module.css
  * -----------------------
- * Styles for the CommandInput component.
+ * Input field, large circular mic button, and send button.
  *
- * All sizes use rem so they scale with the 20px base font set in index.css.
- * Touch targets are sized to at least 58–60px tall to meet WCAG 2.5.5
- * and Apple HIG guidelines for older-adult usability.
+ * Layout:
+ *   [text input — full width]
+ *   [● mic circle]  [── שלח ──────────── send button]
+ *
+ * The mic is 64×64px — a prominent voice input affordance.
+ * All touch targets meet WCAG 2.5.5 (≥ 58px).
  */
 
-/* Wrapper form — single column, full width */
+/* Form wrapper */
 .form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  width: 100%;
-}
-
-/*
- * Input wrapper — provides a positioning context for the absolutely-placed
- * mic icon button that sits inside the input field on the left edge (RTL).
- */
-.inputWrapper {
-  position: relative;
+  gap: 0.85rem;
   width: 100%;
 }
 
 /* Hebrew text input */
 .input {
   width: 100%;
-  padding: 1rem 1rem;
+  padding: 1rem 1.1rem;
   font-size: 1.1rem;
   font-family: inherit;
   color: #1E293B;
   background-color: #ffffff;
   border: 2px solid #CBD5E1;
-  border-radius: 12px;
+  border-radius: 14px;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  /* Increased height — clearer, more comfortable input area */
   min-height: 70px;
   box-sizing: border-box;
-}
-
-/*
- * When the mic icon is present, add physical left padding so user text
- * never overlaps the icon (absolutely positioned on the physical left edge).
- */
-.inputWithMic {
-  padding-left: 3.4rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .input::placeholder {
@@ -65,24 +50,100 @@
   cursor: not-allowed;
 }
 
-/*
- * Recording state: pulsing red border communicates clearly that the
- * microphone is listening.
- */
+/* Recording: red pulsing border */
 .inputRecording {
   border-color: #e53e3e;
   box-shadow: 0 0 0 4px rgba(229, 62, 62, 0.12);
-  animation: pulse 1.8s ease-in-out infinite;
+  animation: inputPulse 1.8s ease-in-out infinite;
 }
 
-@keyframes pulse {
+@keyframes inputPulse {
   0%, 100% { box-shadow: 0 0 0 4px rgba(229, 62, 62, 0.12); }
-  50%       { box-shadow: 0 0 0 8px rgba(229, 62, 62, 0.06); }
+  50%       { box-shadow: 0 0 0 8px rgba(229, 62, 62, 0.05); }
 }
 
-/* Submit button — full-width primary action */
+/* Recording hint */
+.recordingHint {
+  margin: -0.3rem 0 0;
+  font-size: 0.9rem;
+  color: #c53030;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* ── Action row ───────────────────────────────────────────────────────────── */
+
+.actionRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* ── Large circular microphone button ────────────────────────────────────── */
+
+.micButton {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background-color: #EFF6FF;
+  border: 2.5px solid #BFDBFE;
+  color: #2563EB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease,
+              color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+}
+
+.micButton:hover:not(:disabled) {
+  background-color: #DBEAFE;
+  border-color: #93C5FD;
+  transform: scale(1.05);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.22);
+}
+
+.micButton:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.micButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.micButton:focus-visible {
+  outline: 3px solid #2563EB;
+  outline-offset: 3px;
+}
+
+/* Recording active — red circle, pulsing */
+.micButtonRecording {
+  background-color: #DC2626;
+  border-color: #DC2626;
+  color: #ffffff;
+  animation: micRingPulse 1.4s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5);
+}
+
+.micButtonRecording:hover:not(:disabled) {
+  background-color: #B91C1C;
+  border-color: #B91C1C;
+}
+
+@keyframes micRingPulse {
+  0%   { box-shadow: 0 0 0 0   rgba(220, 38, 38, 0.5); }
+  70%  { box-shadow: 0 0 0 12px rgba(220, 38, 38, 0);   }
+  100% { box-shadow: 0 0 0 0   rgba(220, 38, 38, 0);   }
+}
+
+/* ── Send button ──────────────────────────────────────────────────────────── */
+
 .button {
-  width: 100%;
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -93,9 +154,9 @@
   color: #ffffff;
   background-color: #2563EB;
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
   cursor: pointer;
-  min-height: 60px;
+  min-height: 64px;
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.32);
   transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
   letter-spacing: 0.02em;
@@ -113,92 +174,25 @@
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28);
 }
 
-/* Empty / recording disabled state — static dimmed */
 .button:disabled:not(.buttonLoading) {
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none;
 }
 
-/* Loading state — pulsing opacity to signal activity */
 .buttonLoading {
-  opacity: 0.82;
+  opacity: 0.8;
   cursor: wait;
   box-shadow: none;
   animation: buttonPulse 1.1s ease-in-out infinite;
 }
 
 @keyframes buttonPulse {
-  0%, 100% { opacity: 0.82; }
-  50%       { opacity: 0.60; }
+  0%, 100% { opacity: 0.8; }
+  50%       { opacity: 0.58; }
 }
 
 .button:focus-visible {
   outline: 3px solid #2563EB;
   outline-offset: 3px;
-}
-
-/*
- * Mic icon button — positioned absolutely inside the input wrapper on the
- * physical left edge. Touch target is 2.6rem × 2.6rem (≈ 52px at 20px base).
- */
-.micIcon {
-  position: absolute;
-  top: 50%;
-  left: 0.4rem;
-  transform: translateY(-50%);
-  width: 2.6rem;
-  height: 2.6rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #1a1a2e;
-  transition: color 0.2s ease, background-color 0.2s ease;
-  padding: 0;
-  z-index: 1;
-}
-
-.micIcon:hover:not(:disabled) {
-  color: #2563EB;
-  background-color: rgba(37, 99, 235, 0.08);
-}
-
-.micIcon:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.micIcon:focus-visible {
-  outline: 3px solid #2563EB;
-  outline-offset: 2px;
-}
-
-/* Recording active state — red pulsing mic icon */
-.micIconRecording {
-  color: #e53e3e;
-  animation: micPulse 1.4s ease-in-out infinite;
-}
-
-.micIconRecording:hover:not(:disabled) {
-  color: #c53030;
-  background-color: rgba(229, 62, 62, 0.08);
-}
-
-@keyframes micPulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.5; }
-}
-
-/* Recording hint text shown below the input while mic is active */
-.recordingHint {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #c53030;
-  font-weight: 500;
-  text-align: center;
-  line-height: 1.5;
 }

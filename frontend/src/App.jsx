@@ -177,8 +177,8 @@ function App() {
       {/* ── Branded full-width header ── */}
       <header className={styles.appHeader}>
         <div className={styles.appHeaderContent}>
-          <h1 className={styles.appTitle}>🎙 עוזר הפקודות הקולי</h1>
-          <p className={styles.appSubtitle}>הפכו כל מחשבה לפקודה ברורה לסירי</p>
+          <h1 className={styles.appTitle}>איך אפשר לעזור?</h1>
+          <p className={styles.appSubtitle}>הקלידו או אמרו בקשה והמערכת תיצור פקודה שסירי תבין</p>
         </div>
       </header>
 
@@ -187,24 +187,6 @@ function App() {
 
         {/* Input card */}
         <main className={`${styles.card} ${loading ? styles.cardLoading : ''}`}>
-
-          {/* Horizontal step strip — replaces the instructions list */}
-          <div className={styles.stepStrip} aria-label="שלבי השימוש">
-            <div className={styles.step}>
-              <span className={styles.stepNum}>1</span>
-              <span>הקלידו פקודה</span>
-            </div>
-            <div className={styles.step}>
-              <span className={styles.stepNum}>2</span>
-              <span>לחצו שלח</span>
-            </div>
-            <div className={styles.step}>
-              <span className={styles.stepNum}>3</span>
-              <span>אמרו לסירי</span>
-            </div>
-          </div>
-
-          {/* Hebrew text input + submit + mic */}
           <CommandInput
             utterance={utterance}
             onChange={setUtterance}
@@ -217,10 +199,31 @@ function App() {
           />
         </main>
 
-        {/* Result / error card — outside the input card, slides up */}
+        {/* AI processing indicator */}
+        {loading && (
+          <div className={styles.processingCard} role="status" aria-live="polite">
+            <span className={styles.processingIcon}>⚙</span>
+            <span className={styles.processingText}>מעבד את הבקשה...</span>
+            <span className={styles.processingDots} aria-hidden="true">
+              <span className={styles.dot} />
+              <span className={styles.dot} />
+              <span className={styles.dot} />
+            </span>
+          </div>
+        )}
+
+        {/* Result / error card */}
         <ResultDisplay result={result} error={error} />
 
-        {/* Reset button — below everything, ghost style */}
+        {/* Inline feedback card — appears below result */}
+        {feedbackData && (
+          <FeedbackDialog
+            onSubmit={handleFeedbackSubmit}
+            onClose={handleFeedbackClose}
+          />
+        )}
+
+        {/* Reset button */}
         {showReset && (
           <button
             type="button"
@@ -230,15 +233,6 @@ function App() {
           >
             ↩ ניסיון חדש
           </button>
-        )}
-
-        {/* Feedback modal — position:fixed, not affected by DOM placement */}
-        {feedbackData && (
-          <FeedbackDialog
-            command={feedbackData.reformulated_command}
-            onSubmit={handleFeedbackSubmit}
-            onClose={handleFeedbackClose}
-          />
         )}
       </div>
     </div>

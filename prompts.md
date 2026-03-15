@@ -2107,3 +2107,47 @@ No backend changes. All interactivity is client-side. The `initialUnderstoodFilt
 
 ### Notes
 No backend changes. FeedbackDialog unchanged. All functionality preserved.
+
+---
+
+## Prompt 38 — AI assistant interface redesign
+
+### User Prompt
+
+> I want to improve the UI so the application looks more like a modern AI assistant product and less like a simple form.
+>
+> Design goal: The UI should feel like an AI assistant workspace. The interaction flow should visually show: User request → AI processing → Suggested command for Siri → optional feedback.
+>
+> Layout requirements:
+> 1. Header: friendly AI title "איך אפשר לעזור?" with subtitle
+> 2. Input area: large input + large circular microphone button + send button
+> 3. AI processing feedback: "מעבד את הבקשה..." with spinner/animation when sending
+> 4. Result card: title "הפקודה שנוצרה עבור סירי", large command text, TTS button "🔊 השמע את הפקודה"
+> 5. Feedback: inline AI follow-up card (not a blocking modal), question "האם סירי הבינה את הפקודה?", כן/לא buttons, optional notes
+>
+> Keep all existing functionality. Accessibility for older adults.
+
+### Assistant Response
+
+**Files changed:**
+- `App.jsx` — header text updated, step strip removed, processing card added, FeedbackDialog rendered inline (no `command` prop)
+- `App.module.css` — processing card styles + animated dots, removed step strip styles
+- `CommandInput.jsx` — full rewrite: mic moved out of input field into dedicated 64px circular button in an action row below the input
+- `CommandInput.module.css` — new circular mic styles, updated layout
+- `ResultDisplay.jsx` — label → "הפקודה שנוצרה עבור סירי:", TTS button → "🔊 השמע את הפקודה", font 2.2→2.4rem
+- `ResultDisplay.module.css` — font size bump
+- `FeedbackDialog.jsx` — removed modal overlay, removed command preview, inline card; notes textarea now conditional (shows only after Yes/No selected)
+- `FeedbackDialog.module.css` — new inline card design (soft blue `#F0F9FF`, sky-blue left border `#0EA5E9`)
+
+**Key design decisions:**
+
+*Header*: "איך אפשר לעזור?" — conversational AI greeting. Larger title (2rem). No step strip.
+
+*Mic button*: 64×64px circle (`border-radius: 50%`). Blue fill idle, red pulsing ring (`@keyframes micRingPulse` — ripple effect) when recording. Sits in an `.actionRow` flex container alongside the Send button.
+
+*Processing card*: `background: #EFF6FF; border: 1.5px solid #BFDBFE`. Contains spinning ⚙ gear icon (`@keyframes spin 2s linear infinite`), "מעבד את הבקשה..." text, and three staggered pulsing dots (`@keyframes dotPulse` with 0.2s delay increments). Appears only when `loading === true`.
+
+*Feedback card*: No more `position: fixed` overlay. The `.card` uses `border-right: 5px solid #0EA5E9` in the page flow. Notes textarea has `@keyframes fadeIn` and renders only when `selected !== null`. Yes/No buttons now have ✓ and ✕ prefixes.
+
+### Notes
+No backend changes. All logic (state, hooks, network calls) unchanged. Accessibility preserved: 64px mic, 64px send button, 20px base font.

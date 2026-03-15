@@ -64,21 +64,21 @@ function ResultDisplay({ result, error }) {
       role="status"
       aria-live="polite"
     >
-      {/* Status label */}
-      <p className={styles.resultLabel}>✓ הפקודה לסירי מוכנה</p>
+      {/* Label */}
+      <p className={styles.resultLabel}>הפקודה שנוצרה עבור סירי:</p>
 
       {/* The reformulated command — very large, prominent */}
       <p className={styles.resultText}>{result}</p>
 
-      {/* TTS button — reads the command aloud */}
+      {/* TTS button */}
       <button
         type="button"
         className={styles.ttsButton}
         onClick={() => speak(result)}
         disabled={speaking}
-        aria-label="הקראת הפקודה בקול"
+        aria-label="השמעת הפקודה בקול"
       >
-        {speaking ? '▐▐ מנגן...' : '🔊 הקראת הפקודה'}
+        {speaking ? '▐▐ מנגן...' : '🔊 השמע את הפקודה'}
       </button>
     </div>
   )
