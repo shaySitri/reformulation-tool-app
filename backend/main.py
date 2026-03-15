@@ -56,8 +56,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.model_loader import IntentClassifier
 from backend.pipeline import run_pipeline
+from backend.feedback_logger import append_feedback
 from backend.schemas import (
     ErrorResponse,
+    FeedbackRequest,
+    FeedbackResponse,
     HealthResponse,
     ReformulateRequest,
     ReformulateResponse,
@@ -241,3 +244,52 @@ def reformulate_utterance(
         )
 
     return ReformulateResponse(**result)
+
+
+@app.post(
+    "/feedback",
+    response_model=FeedbackResponse,
+    responses={
+        500: {
+            "model": ErrorResponse,
+            "description": "Failed to write the feedback record.",
+        },
+    },
+    summary="Submit user feedback for a reformulation result",
+    description=(
+        "Records whether the user reports that Siri understood the reformulated command. "
+        "Both answered and unanswered (dialog closed) feedback is accepted. "
+        "When the user closed the dialog without answering, `siri_understood` is null."
+    ),
+    tags=["Feedback"],
+)
+def submit_feedback(body: FeedbackRequest) -> FeedbackResponse:
+    """
+    Append one feedback record to logs/feedback.jsonl.
+
+    The record always includes a UTC ISO-8601 timestamp plus all fields from
+    the request body. siri_understood is null when the user dismissed the dialog.
+    """
+    from datetime import datetime, timezone
+
+    record = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "original_input": body.original_input,
+        "intent_id": body.intent_id,
+        "intent_label": body.intent_label,
+        "reformulated_command": body.reformulated_command,
+        "backend_status": body.backend_status,
+        "siri_understood": body.siri_understood,
+        "notes": body.notes,
+    }
+
+    try:
+        append_feedback(record)
+    except Exception:
+        logger.exception("Failed to write feedback record")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An internal error occurred.",
+        )
+
+    return FeedbackResponse(ok=True)

@@ -40,6 +40,7 @@
 
 import { useState } from 'react'
 import CommandInput from './components/CommandInput.jsx'
+import FeedbackDialog from './components/FeedbackDialog.jsx'
 import ResultDisplay from './components/ResultDisplay.jsx'
 import { preprocessInput } from './utils/preprocessInput.js'
 import { useSpeechRecognition } from './utils/useSpeechRecognition.js'
@@ -53,6 +54,9 @@ function App() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState(false)
   const [loading, setLoading] = useState(false)
+  // feedbackData is non-null while the feedback dialog is visible.
+  // Holds the fields needed to build the feedback log record.
+  const [feedbackData, setFeedbackData] = useState(null)
 
   // Voice recording hook. onTranscript writes the raw transcript directly into
   // the utterance state — no preprocessing, no modification of the visible text.
@@ -102,6 +106,13 @@ function App() {
 
       if (data.status === 'success' && data.reformulated) {
         setResult(data.reformulated)
+        setFeedbackData({
+          original_input: data.original,
+          intent_id: data.intent_id,
+          intent_label: data.intent_label,
+          reformulated_command: data.reformulated,
+          backend_status: data.status,
+        })
       } else {
         setError(true)
       }
@@ -113,6 +124,39 @@ function App() {
   }
 
   /**
+   * postFeedback — fire-and-forget POST to /api/feedback.
+   * Errors are silently ignored so the UI is never blocked by a logging failure.
+   */
+  async function postFeedback(siريUnderstand, notes) {
+    if (!feedbackData) return
+    try {
+      await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...feedbackData,
+          siri_understood: siريUnderstand,
+          notes: notes ?? null,
+        }),
+      })
+    } catch {
+      // Feedback logging failure must never disrupt the user experience.
+    }
+  }
+
+  /** Called when user answers כן or לא (with optional notes). */
+  async function handleFeedbackSubmit(siريUnderstand, notes) {
+    await postFeedback(siريUnderstand, notes)
+    setFeedbackData(null)
+  }
+
+  /** Called when user closes the dialog without answering. */
+  async function handleFeedbackClose() {
+    await postFeedback(null, null)
+    setFeedbackData(null)
+  }
+
+  /**
    * resetAll — restore the interface to its initial empty state.
    * Stops any active recording, clears the input, result, and error.
    */
@@ -121,6 +165,7 @@ function App() {
     setUtterance('')
     setResult(null)
     setError(false)
+    setFeedbackData(null)
   }
 
   // Show the reset button whenever there is anything to clear.
@@ -163,6 +208,12 @@ function App() {
         {/* Result / error area — only rendered after a response */}
         <div className={styles.resultArea}>
           <ResultDisplay result={result} error={error} />
+          {feedbackData && (
+            <FeedbackDialog
+              onSubmit={handleFeedbackSubmit}
+              onClose={handleFeedbackClose}
+            />
+          )}
         </div>
 
         {/* Reset button — visible once the user has typed or received a response */}

@@ -1486,3 +1486,253 @@ remove demo folder, update the prompts file and push changes.
 - Removed `demos/` folder (3 HTML files deleted)
 - Updated prompts.md with full entries for prompts 26–30
 - Committed and pushed
+
+---
+
+## Prompt 31 — 2026-03-15
+
+### User Prompt
+The next step is to add a lightweight user feedback flow after a command is generated.
+
+Goal:
+After the system displays a valid reformulated command, I want to collect simple feedback about the real interaction outcome.
+
+Requirements:
+
+1. After a valid reformulated command is displayed, automatically open a small feedback dialog / popup.
+
+2. The feedback dialog should ask:
+- Did Siri understand the command?
+  - Yes
+  - No
+- Optional notes / comments
+
+3. The feedback flow must remain very simple, clear, and user-friendly for older adults.
+
+4. Store the feedback in a structured log file.
+Use a single shared logging component / service for this feature.
+
+5. Each log record should include:
+- timestamp
+- original user input
+- detected intent
+- reformulated command
+- backend status
+- user answer to "Did Siri understand the command?"
+- optional user notes
+
+6. Use a structured format for the log file so it can be read easily later.
+Prefer JSONL format (one JSON object per line).
+
+7. The feedback should be written to the log only after one of these happens:
+- the user submits the feedback
+- the user closes the dialog without answering
+
+8. Answering the feedback is not mandatory.
+The dialog must include a close button.
+Even if the user closes the dialog without responding, the interaction must still be logged.
+
+9. If the user does not answer the feedback question, store that explicitly in the log in a clear way (for example: null / unanswered).
+
+10. Do not change the existing model or reformulation logic.
+This feature should only add a product-level feedback layer around the current system.
+
+Before implementing, briefly explain:
+- how the feedback flow will appear in the UI
+- when the log entry will be written
+- where the log file will be written
+- the exact structure of one log record
+- how you will keep the feature simple and suitable for older adults
+
+Do not write code until I approve the plan.
+Also remember to document the FULL prompt and the FULL response in prompts.md.
+
+### Assistant Response
+
+**How feedback appears in the UI**
+After the teal success card slides in, a second card appears below it (not a blocking overlay) with:
+- Large Hebrew question: "האם סירי הבינה את הפקודה?"
+- Two big color-coded buttons: כן (green) / לא (red)
+- Optional notes text field
+- A clear ✕ close button
+
+**When the log entry is written**
+- On כן/לא click → logs with `siri_understood: true/false` + notes
+- On ✕ close → logs with `siri_understood: null, notes: null`
+
+**Where the log file is written**
+`<repo_root>/logs/feedback.jsonl` — created automatically on first write.
+
+**Exact log record structure**
+```json
+{
+  "timestamp": "2026-03-15T14:30:00.123Z",
+  "original_input": "תשלחי הודעה לישראל",
+  "intent_id": 2,
+  "intent_label": "sms",
+  "reformulated_command": "שלחי הודעה לישראל",
+  "backend_status": "success",
+  "siri_understood": true,
+  "notes": "עבד בסדר"
+}
+```
+
+**How it stays simple for older adults**
+- No blocking modal — success card stays visible
+- Only two large buttons to choose from
+- Notes field clearly labeled optional
+- Any interaction (including close) completes the flow — no traps
+
+**Plan approved. Implementation:**
+
+New files created:
+- `backend/feedback_logger.py` — `append_feedback(record)` writes one JSONL line to `logs/feedback.jsonl`; creates `logs/` directory automatically
+- `frontend/src/components/FeedbackDialog.jsx` — feedback panel component (question, כן/לא buttons, notes textarea, ✕ close button)
+- `frontend/src/components/FeedbackDialog.module.css` — Calm & Clear teal theme, WCAG AA button sizes (≥52px)
+
+Modified files:
+- `backend/schemas.py` — added `FeedbackRequest` (7 fields) and `FeedbackResponse` (`ok: bool`)
+- `backend/main.py` — added `POST /feedback` route; builds UTC-timestamped record, calls `append_feedback`, returns `FeedbackResponse(ok=True)`; errors logged server-side, never block the UI
+- `frontend/src/App.jsx` — added `feedbackData` state; on successful reformulation, stores `{original_input, intent_id, intent_label, reformulated_command, backend_status}`; `handleFeedbackSubmit` / `handleFeedbackClose` fire `POST /api/feedback` then clear `feedbackData`; `<FeedbackDialog>` renders below `<ResultDisplay>` when `feedbackData` is non-null; `resetAll` also clears `feedbackData`
+
+### Notes
+Feedback layer added entirely around the existing pipeline — no reformulation logic touched. Log file at `logs/feedback.jsonl` is auto-created on first write.
+
+---
+
+## Prompt 32 — 2026-03-15
+
+### User Prompt
+The current feedback dialog is not visible enough and can be easily missed.
+
+I want to refine the feedback flow and logging behavior.
+
+Requirements:
+
+1. Feedback dialog behavior
+
+After a valid reformulated command is displayed, a TRUE modal popup must appear.
+
+The popup must:
+- appear in the center of the screen
+- include a darkened background overlay
+- block interaction with the rest of the page until the user closes or submits
+- be visually clear and noticeable
+
+This must be a real modal dialog, not an inline UI element inside the page.
+
+2. Feedback content
+
+The popup should ask:
+
+Did Siri understand the command?
+
+Options:
+- Yes
+- No
+
+Optional field:
+- Notes / comments
+
+3. Closing behavior
+
+The popup must include two actions:
+- Submit feedback
+- Close dialog
+
+Submitting feedback is optional.
+
+4. Logging rules
+
+The log entry must be appended ONLY when one of the following happens:
+- the user presses the Submit button
+- the user presses the Close button
+
+Do not write anything to the log before that.
+
+5. Logging format
+
+Store logs in a JSONL file (one JSON object per line).
+
+Each record should contain:
+
+- timestamp
+- original user input
+- detected intent
+- reformulated command
+- backend status
+- siri_understood (true / false / null if user closed without answering)
+- user_notes (optional)
+
+6. Logging persistence
+
+Logging must work during normal usage and during localhost development.
+
+The system must append entries directly to the log file immediately when the dialog closes or submits.
+
+No database should be used.
+
+7. Logging component
+
+Use a single shared logging component/service responsible for writing to the feedback log file.
+
+Ensure file writes are safe and always append new records.
+
+Before implementing, explain:
+
+- how the modal popup will be implemented
+- how you will ensure it is clearly visible
+- when exactly the log entry will be written
+- where the log file will be stored
+- the exact JSON structure of one log entry
+
+Do not write code until I approve the plan.
+
+Also remember to document the FULL prompt and the FULL response in prompts.md.
+
+### Assistant Response
+
+**How the modal will be implemented**
+`position: fixed` overlay (`rgba(0,0,0,0.5)`, `z-index: 1000`) covers the entire viewport. The modal box is centered via CSS `transform: translate(-50%,-50%)` (using flexbox centering on the overlay). Clicking outside the modal does nothing — the user must use Close or Submit. Smooth fade+scale animation on open (0.2s).
+
+**How visibility is ensured**
+- Full-page dark overlay makes it impossible to miss
+- White modal with strong `box-shadow: 0 20px 60px rgba(0,0,0,0.3)`
+- Large question text (1.3rem bold), large toggle buttons (min-height 58px, font-size 1.2rem)
+- Width `min(480px, 90vw)` — works on desktop and mobile
+
+**When the log entry is written**
+
+| Action | siri_understood | notes |
+|---|---|---|
+| Clicks "שלח משוב" (Submit) | true / false / null (selected) | text or null |
+| Clicks "סגור" (Close) | null | null |
+
+Nothing is logged while the modal is open.
+
+**Where the log file is stored**
+`<repo_root>/logs/feedback.jsonl` — unchanged from Prompt 31.
+
+**Exact JSON structure**
+```json
+{
+  "timestamp": "2026-03-15T14:30:00.123456+00:00",
+  "original_input": "תשלחי הודעה לישראל שאני מאחרת",
+  "intent_id": 2,
+  "intent_label": "sms",
+  "reformulated_command": "שלחי הודעה לישראל שאני מאחרת",
+  "backend_status": "success",
+  "siri_understood": true,
+  "notes": "עבד בסדר"
+}
+```
+
+**Plan approved. Implementation:**
+
+Only two files changed (backend and App.jsx untouched):
+
+- `frontend/src/components/FeedbackDialog.jsx` — full rewrite: fixed overlay + modal box; Yes/No are now toggle selectors (`selected` state: null/true/false); explicit Submit ("שלח משוב") and Close ("סגור") action buttons at the bottom; `onSubmit(selected, notes)` called only on Submit click; `onClose()` called on Close or ✕ click
+- `frontend/src/components/FeedbackDialog.module.css` — full rewrite: `.overlay` (fixed, full viewport, semi-transparent black), `.modal` (white card, centered, shadow, fade+scale animation), `.selectedYes`/`.selectedNo` modifier classes for filled active state, action row with teal Submit + gray outlined Close
+
+### Notes
+Pure UI refinement — no backend changes, no App.jsx changes. The dialog is now a true blocking modal with darkened overlay.

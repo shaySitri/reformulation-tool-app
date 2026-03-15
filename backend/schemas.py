@@ -96,6 +96,35 @@ class ErrorResponse(BaseModel):
     detail: str = Field(description="Generic error description.")
 
 
+class FeedbackRequest(BaseModel):
+    """
+    Request body for the POST /feedback endpoint.
+
+    Carries the full context of one reformulation interaction plus the user's
+    optional answer to "Did Siri understand the command?".
+    """
+
+    original_input: str = Field(description="The original Hebrew utterance as received by the pipeline.")
+    intent_id: int = Field(description="Predicted intent class index (0–9).")
+    intent_label: str = Field(description="Human-readable intent label (e.g. 'call', 'sms').")
+    reformulated_command: str = Field(description="The structured Hebrew command that was shown to the user.")
+    backend_status: str = Field(description="Pipeline outcome: 'success' or 'failed'.")
+    siri_understood: Optional[bool] = Field(
+        default=None,
+        description="True if the user reports Siri understood; False if not; null if the user closed without answering.",
+    )
+    notes: Optional[str] = Field(
+        default=None,
+        description="Optional free-text comment from the user. null when not provided.",
+    )
+
+
+class FeedbackResponse(BaseModel):
+    """Response body for the POST /feedback endpoint."""
+
+    ok: bool = Field(description="True when the feedback record was successfully written.")
+
+
 class HealthResponse(BaseModel):
     """Response body for the GET /health endpoint."""
 
