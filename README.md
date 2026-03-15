@@ -1,27 +1,226 @@
-# Hebrew Voice Command Reformulation Tool
+# Hebrew Voice Command Reformulator
+### מנסח פקודות קוליות בעברית
 
-A web application that transforms natural-language Hebrew utterances into structured commands
-suitable for reading aloud to Siri. Built for elderly Israeli smartphone users.
+> Converts natural spoken Hebrew utterances into canonical, Siri-ready commands — built for elderly Israeli smartphone users.
 
-A Hebrew NLP pipeline (AlephBERT intent classifier + heBERT / DictaBERT NER) is served via
-a FastAPI backend. A React + Vite frontend provides voice recording, text input, and text-to-speech
-read-back — all in Hebrew with a right-to-left accessible layout.
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.111%2B-009688)
+![React](https://img.shields.io/badge/React-18-61DAFB)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C)
 
 ---
 
-## Running the Application Locally
+## Screenshots
 
-### 1. Start the backend
+<p align="center">
+  <img src="docs/screenshots/main_interface.png" alt="Main Interface" width="700"/>
+  <br/><em>Main interface — voice input and reformulated command card</em>
+</p>
+<!-- 📸 Replace docs/screenshots/main_interface.png with your screenshot -->
+
+<p align="center">
+  <img src="docs/screenshots/result_card.png" alt="Result Card with TTS" width="700"/>
+  <br/><em>Result card — reformulated Siri command with text-to-speech playback button</em>
+</p>
+<!-- 📸 Replace docs/screenshots/result_card.png with your screenshot -->
+
+<p align="center">
+  <img src="docs/screenshots/stats_dashboard.png" alt="Developer Stats Dashboard" width="700"/>
+  <br/><em>Developer stats dashboard — per-intent feedback analytics at /stats</em>
+</p>
+<!-- 📸 Replace docs/screenshots/stats_dashboard.png with your screenshot -->
+
+---
+
+## Overview
+
+Elderly Israeli smartphone users often struggle to phrase commands the way Siri expects. They speak naturally — colloquially, with filler words, unusual word order, or missing keywords — and Siri misunderstands them.
+
+This system acts as a **bridge layer**: it accepts a freeform spoken Hebrew utterance, classifies its intent using a fine-tuned BERT model, extracts named entities (people, locations, dates/times) with a dual NER pipeline, and reconstructs a clean canonical command that Siri reliably understands. The reformulated command is read aloud to the user at a comfortable pace, ready to be spoken to Siri.
+
+**Example transformations:**
+
+| User says | System produces |
+|-----------|----------------|
+| `תשלחי הודעה לישראל שאני מאחרת` | `שלח הודעה לישראל אני מאחרת` |
+| `תתקשרי לאמא שלי` | `תתקשרי אמא` |
+| `מה מזג האוויר היום בתל אביב` | `מה מזג האוויר בתל אביב` |
+| `תעיר אותי בשבע וחצי בבוקר` | `התקם הפעם ו שבע וחצי בוקר` |
+| `תכתבי לי פתק לקנות לחם וחלב` | `כתוב לי פתק עם לקנות לחם וחלב` |
+
+---
+
+## Features
+
+- **Voice input** — Browser-native speech recognition (Web Speech API, `he-IL`), 30-second auto-stop, live transcription in real time
+- **Text-to-speech output** — Reformulated command read aloud at 0.75× speed, paced for comfortable listening by older adults
+- **10-intent NLP pipeline** — Fine-tuned AlephBERT classifier (99.6% accuracy) covering calls, SMS, alarms, navigation, weather, calendar, search, camera, notes, and flashlight
+- **Dual NER pipeline** — `heBERT_NER` as primary, `DictaBERT-NER` as fallback for robust Hebrew named-entity extraction
+- **Fuzzy matching** — Levenshtein distance (<2–3 edits) strips filler words and tolerates speech recognition errors
+- **Frontend preprocessing** — Digits converted to Hebrew words, wake word "סירי" stripped, non-Hebrew characters removed before the request reaches the backend
+- **Two-stage validation** — Input validated before inference; output validated after reformulation; failures surface as user-friendly messages, never raw errors
+- **Feedback collection** — After each reformulation users can report whether Siri understood; results stored in an append-only JSONL log
+- **Developer stats dashboard** — Per-intent success rates, success percentage over time, full log viewer at `/stats`
+- **Full RTL Hebrew UI** — Rubik and Heebo fonts, right-to-left layout throughout, Hebrew-idiomatic error messages
+- **Large touch targets** — All interactive elements ≥ 54 px, designed for older adults with reduced dexterity
+
+---
+
+## Intent Map
+
+| ID | Intent | Example Input | Example Output |
+|----|--------|--------------|----------------|
+| 0 | `call` | `תתקשרי לדוד` | `תתקשרי דוד` |
+| 1 | `alarm` | `תעיר אותי בשש בבוקר` | `התקם הפעם ו שש בוקר` |
+| 2 | `sms` | `שלחי הודעה לרות שאני בדרך` | `שלח הודעה לרות אני בדרך` |
+| 3 | `search_query` | `מה זה גלוקוז` | `חפש גלוקוז` |
+| 4 | `navigation` | `תנווטי אותי לבית החולים` | `נווט אותי לבית החולים` |
+| 5 | `calendar` | `תוסיפי פגישה עם הרופא ביום שלישי` | `הוסף אירוע ליומן ביום שלישי פגישה עם הרופא` |
+| 6 | `camera` | `תצלמי אותי` | `צילום` |
+| 7 | `weather` | `מה מזג האוויר מחר בחיפה` | `מה מזג האוויר בחיפה` |
+| 8 | `notes` | `תכתבי לי פתק לקנות לחם` | `כתוב לי פתק עם לקנות לחם` |
+| 9 | `flashlight` | `תדליקי את הפנס` | `דליקו פנס` |
+
+---
+
+## Architecture
+
+```
+Hebrew utterance (voice or typed)
+        │
+        ▼
+  ┌─────────────────────────────────────┐
+  │  Frontend preprocessing             │
+  │  • Digits → Hebrew words (0–999)    │
+  │  • Strip wake word "סירי"           │
+  │  • Remove non-Hebrew characters     │
+  └─────────────────────────────────────┘
+        │  POST /api/reformulate
+        ▼
+  ┌─────────────────────────────────────┐
+  │  Input validation                   │
+  │  Hebrew letters (א–ת) + space only  │
+  │  Reject empty / invalid chars → 400 │
+  └─────────────────────────────────────┘
+        │
+        ▼
+  ┌─────────────────────────────────────┐
+  │  Intent classification              │
+  │  Fine-tuned AlephBERT (768-dim)     │
+  │  10 classes · 99.6% accuracy        │
+  └─────────────────────────────────────┘
+        │
+        ▼
+  ┌─────────────────────────────────────┐
+  │  Named entity extraction            │
+  │  heBERT_NER (primary)               │
+  │  DictaBERT-NER (fallback)           │
+  │  Entities: PERSON · LOCATION · TIME │
+  └─────────────────────────────────────┘
+        │
+        ▼
+  ┌─────────────────────────────────────┐
+  │  Intent-specific handler            │
+  │  Slot filling + template assembly   │
+  │  Fuzzy matching for filler words    │
+  │  Hebrew prefix normalization (ב, ל) │
+  └─────────────────────────────────────┘
+        │
+        ▼
+  ┌─────────────────────────────────────┐
+  │  Output validation                  │
+  │  Hebrew only · min 6 chars          │
+  │  Failure → status "failed", 200     │
+  └─────────────────────────────────────┘
+        │
+        ▼
+  Canonical Hebrew command string
+        │
+        ▼
+  TTS playback at 0.75× rate
+```
+
+### Key Components
+
+| Component | Description |
+|-----------|-------------|
+| `command_reformulatuin_script.py` | NLP core — 1,256 lines, 10 intent handlers, dual NER pipeline |
+| `backend/main.py` | FastAPI app, routes, async startup/shutdown lifecycle |
+| `backend/pipeline.py` | Three-stage orchestration (validate → classify → reformulate) |
+| `backend/model_loader.py` | AlephBERT intent classifier — deferred load, eval mode |
+| `backend/validators.py` | Input and output validation (Hebrew + space charset) |
+| `backend/schemas.py` | Pydantic request/response models |
+| `backend/feedback_logger.py` | Append-only JSONL feedback writer |
+| `backend/stats_reader.py` | Feedback aggregation and per-intent statistics |
+| `frontend/src/App.jsx` | Root component — state, API call, layout |
+| `frontend/src/components/` | `CommandInput`, `ResultDisplay`, `FeedbackDialog` |
+| `frontend/src/utils/useSpeechRecognition.js` | Voice input hook (he-IL, 30s auto-stop) |
+| `frontend/src/utils/useTTS.js` | Text-to-speech hook (he-IL, 0.75× rate) |
+| `frontend/src/utils/preprocessInput.js` | Pre-send cleaning and number normalization |
+| `intent_model/` | Fine-tuned AlephBERT weights (`model.safetensors`) |
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Backend framework | Python 3.10+, FastAPI, Uvicorn |
+| NLP runtime | Hugging Face Transformers 4.44.2, PyTorch 2.0+ |
+| Intent classification | Fine-tuned AlephBERT — 768-dim, 10 classes, 99.6% acc. |
+| NER (primary) | `avichr/heBERT_NER` |
+| NER (fallback) | `dicta-il/dictabert-ner` |
+| Fuzzy matching | `python-Levenshtein` |
+| Frontend framework | React 18, Vite 4 |
+| Styling | CSS Modules, Rubik + Heebo fonts |
+| Voice I/O | Web Speech API (`SpeechRecognition` + `SpeechSynthesis`) |
+| Routing | React Router v7 |
+| Testing | Pytest 8, FastAPI TestClient (httpx) |
+
+---
+
+## Requirements
+
+- **Python** 3.10 or later
+- **Node.js** 18 or later
+- **RAM** ~2 GB available (three transformer models load at startup)
+- **Browser** Chrome (desktop / Android) or Safari (iOS) for voice input via Web Speech API; all other browsers support typed input only
+- **OS** Windows, macOS, or Linux — see the Windows-specific note below before upgrading `transformers`
+
+---
+
+## Installation & Running
+
+### 1. Backend
 
 ```bash
-# From the repository root (activate your Python virtualenv first):
+# Clone the repository and enter the project directory
+git clone <repo-url>
+cd reformulation_tool_app
+
+# Create and activate a virtual environment (recommended)
+python -m venv .venv
+source .venv/bin/activate        # macOS / Linux
+.venv\Scripts\activate           # Windows
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Start the API server
 uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The server loads all three NLP models at startup (~10–20 seconds on first run).
-Once you see `=== All models ready. Server accepting requests. ===` the server is ready.
+Expected output on first start:
 
-### 2. Start the frontend dev server
+```
+=== Startup: loading intent classifier from ./intent_model ===
+=== All models ready. Server accepting requests. ===
+INFO:     Uvicorn running on http://0.0.0.0:8000
+```
+
+> **Note:** The first startup loads three transformer models (~10–20 seconds). After that, every request is fast with no per-request cold starts.
+
+### 2. Frontend
 
 ```bash
 cd frontend
@@ -29,64 +228,48 @@ npm install        # first time only
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser (Chrome or Safari recommended for voice input).
+Open **http://localhost:5173** in your browser. The Vite dev server proxies all `/api/*` requests to the backend at `http://127.0.0.1:8000`, so both servers must be running simultaneously.
 
-The Vite dev server proxies all `/api/*` requests to `http://127.0.0.1:8000`, so both
-servers must be running simultaneously.
+Interactive API docs (auto-generated by FastAPI) are available at:
+- `http://localhost:8000/docs` — Swagger UI
+- `http://localhost:8000/redoc` — ReDoc
 
 ---
 
 ## How the App Works
 
 1. The user types a Hebrew command or clicks the microphone icon to speak it.
-2. The frontend preprocesses the input before sending it:
-   - Converts digits to Hebrew words (e.g. `7` → `שבע`)
+2. The frontend preprocesses the input silently before sending:
+   - Converts digits to Hebrew words (`7` → `שבע`, `514` → `חמש מאות וארבע עשרה`)
    - Removes the wake word `סירי` if present
    - Strips any characters outside the Hebrew alphabet and space
-3. The cleaned command is sent to `POST /api/reformulate`.
-4. The backend classifies the intent and extracts named entities, then returns a structured command.
-5. The reformulated command is displayed and can be read aloud via the browser's text-to-speech.
-
----
-
-## Frontend Features
-
-- **Voice input**: microphone icon inside the input field triggers `SpeechRecognition` (`he-IL`),
-  with live transcription, 30-second auto-stop, and clear recording indicators.
-- **Text input**: manual fallback for all browsers.
-- **Text-to-speech**: teal "read aloud" button uses `SpeechSynthesis` (`he-IL`) at a slower
-  rate (0.75) suited to older adults.
-- **Input preprocessing**: digits → Hebrew, `סירי` removal, character cleaning — applied
-  silently at submit time; the visible input field always shows the raw typed/spoken text.
-- **RTL layout**: `<html dir="rtl" lang="he">` gives native right-to-left flow.
-- **Design**: Direction 1 "Calm & Clear" — Rubik body font, Heebo title font, blue-tinted
-  gradient background, teal result card, accessible touch targets (≥ 54 px).
+3. The cleaned text is sent to `POST /api/reformulate`.
+4. The backend validates the input, classifies the intent, and dispatches to the appropriate handler.
+5. The handler runs NER on the utterance, fills template slots, and returns a canonical command string.
+6. The reformulated command is displayed on screen.
+7. The user presses the speaker button to hear the command read aloud (at 0.75× speed) before speaking it to Siri.
+8. After each reformulation, the user can report whether Siri understood — this feedback is stored for analysis.
 
 ---
 
 ## Running Tests
 
 ```bash
-# All tests (validator unit tests + API integration tests):
+# Full test suite
 pytest tests/ -v
 
-# Validator unit tests only (fast, no models needed):
+# Validator unit tests only — fast, no models needed
 pytest tests/test_validators.py -v
 
-# API integration tests only (requires model load, ~30 s startup):
+# API integration tests — loads all models (~30 s first run)
 pytest tests/test_api.py -v
 ```
+
+The test suite includes **48 validator unit tests** and **34 API integration tests**.
 
 ---
 
 ## API Reference
-
-Interactive docs auto-generated by FastAPI:
-
-```
-http://localhost:8000/docs      ← Swagger UI (try requests in-browser)
-http://localhost:8000/redoc     ← ReDoc
-```
 
 ### `GET /health`
 
@@ -102,18 +285,13 @@ Liveness probe.
 
 ### `POST /reformulate`
 
-Accepts a preprocessed Hebrew utterance, classifies its intent, extracts named entities,
-and returns a structured Siri command.
+Accepts a preprocessed Hebrew utterance, classifies its intent, extracts named entities, and returns a canonical Siri command.
 
 **Request body**
 
 ```json
 { "utterance": "תשלחי הודעה לישראל שאני מאחרת" }
 ```
-
-| Field | Type | Description |
-|---|---|---|
-| `utterance` | string | Hebrew letters and spaces only. Digits and other characters must be stripped by the caller before sending. |
 
 **Response — 200 OK (success)**
 
@@ -127,7 +305,7 @@ and returns a structured Siri command.
 }
 ```
 
-**Response — 200 OK (failed pipeline output)**
+**Response — 200 OK (pipeline produced no valid output)**
 
 ```json
 {
@@ -147,33 +325,63 @@ and returns a structured Siri command.
 
 ---
 
-## Intent Map
+### `POST /feedback`
 
-| ID | Label | Description |
-|---|---|---|
-| 0 | `call` | Place a phone call |
-| 1 | `alarm` | Set an alarm |
-| 2 | `sms` | Send a text message |
-| 3 | `search_query` | Perform a web search |
-| 4 | `navigation` | Get directions |
-| 5 | `calendar` | Create a calendar event |
-| 6 | `camera` | Open the camera |
-| 7 | `weather` | Check the weather |
-| 8 | `notes` | Create a note |
-| 9 | `flashlight` | Toggle the flashlight |
+Log whether Siri understood the reformulated command.
+
+**Request body**
+
+```json
+{
+  "original_input": "תשלחי הודעה לישראל",
+  "intent_id": 2,
+  "intent_label": "sms",
+  "reformulated_command": "שלח הודעה לישראל",
+  "backend_status": "success",
+  "siri_understood": true,
+  "notes": null
+}
+```
+
+**Response — 200 OK**
+
+```json
+{ "ok": true }
+```
+
+---
+
+### `GET /stats`
+
+Aggregated feedback statistics for the developer dashboard.
+
+**Response — 200 OK**
+
+```json
+{
+  "total": 42,
+  "siri_understood": {
+    "yes": 35, "no": 5, "unanswered": 2,
+    "yes_pct": 83.3, "no_pct": 11.9, "unanswered_pct": 4.8
+  },
+  "by_intent": {
+    "sms":  { "total": 15, "yes": 13, "no": 2, "unanswered": 0 },
+    "call": { "total": 12, "yes": 10, "no": 2, "unanswered": 0 }
+  },
+  "records": [ ... ]
+}
+```
 
 ---
 
 ## Input Validation
 
-The backend accepts only Hebrew letters (U+05D0–U+05EA) and ASCII space. Validation runs
-in two stages:
+The backend accepts only Hebrew letters (U+05D0–U+05EA) and ASCII space. Validation runs in two stages:
 
 1. **Input stage** — before the pipeline. Invalid input → HTTP 400.
 2. **Output stage** — after reformulation. Unusable output → `status: "failed"`, HTTP 200.
 
-The frontend preprocessing pipeline mirrors these rules and cleans the input silently before
-every request so users never see a validation error for typical voice or typed input.
+The frontend preprocessing pipeline mirrors these rules and cleans the input silently at submit time so users never see a validation error for typical voice or typed input.
 
 ---
 
@@ -182,34 +390,47 @@ every request so users never see a validation error for typical voice or typed i
 ```
 reformulation_tool_app/
 ├── backend/
-│   ├── main.py                        ← FastAPI app, lifespan, routes
-│   ├── pipeline.py                    ← Two-stage pipeline orchestration
-│   ├── model_loader.py                ← IntentClassifier (AlephBERT)
-│   ├── validators.py                  ← is_valid_text, validate_input, validate_output
-│   └── schemas.py                     ← Pydantic request/response models
+│   ├── main.py                     FastAPI app, routes, async startup/shutdown
+│   ├── pipeline.py                 Three-stage pipeline orchestration
+│   ├── model_loader.py             AlephBERT intent classifier wrapper
+│   ├── validators.py               Input and output validation logic
+│   ├── schemas.py                  Pydantic request/response models
+│   ├── feedback_logger.py          Append-only JSONL feedback writer
+│   └── stats_reader.py             Feedback aggregation for /stats
 ├── frontend/
-│   ├── index.html                     ← Root HTML, RTL, Google Fonts (Heebo + Rubik)
-│   ├── vite.config.js                 ← Vite dev server + /api proxy to :8000
+│   ├── index.html                  Root HTML (RTL, Hebrew fonts)
+│   ├── vite.config.js              Vite config + /api proxy to :8000
 │   └── src/
-│       ├── App.jsx                    ← Root component, state, fetch, voice hook
-│       ├── App.module.css             ← Page layout, card, instructions, reset button
-│       ├── index.css                  ← Global base styles, Rubik font, gradient bg
+│       ├── App.jsx                 Root component — state, API call, layout
+│       ├── Router.jsx              Route definitions
 │       ├── components/
-│       │   ├── CommandInput.jsx       ← Input field, mic icon, submit button
-│       │   ├── CommandInput.module.css
-│       │   ├── ResultDisplay.jsx      ← Result/error card, TTS button
-│       │   └── ResultDisplay.module.css
+│       │   ├── CommandInput.jsx    Text field + microphone button + submit
+│       │   ├── ResultDisplay.jsx   Result / error card + TTS button
+│       │   └── FeedbackDialog.jsx  Post-reformulation feedback form
 │       └── utils/
-│           ├── preprocessInput.js     ← Pipeline: normalizeNumbers → removeSiri → cleanInput
-│           ├── normalizeNumbers.js    ← Digit sequences → Hebrew words (0–999)
-│           ├── useSpeechRecognition.js← SpeechRecognition hook (he-IL, 30 s auto-stop)
-│           └── useTTS.js              ← SpeechSynthesis hook (he-IL, rate 0.75)
+│           ├── preprocessInput.js       Pre-send cleaning pipeline
+│           ├── normalizeNumbers.js      Digit → Hebrew word conversion (0–999)
+│           ├── useSpeechRecognition.js  Voice input hook (he-IL, 30s auto-stop)
+│           └── useTTS.js               Text-to-speech hook (he-IL, 0.75× rate)
+├── intent_model/                   Fine-tuned AlephBERT weights (local)
 ├── tests/
-│   ├── conftest.py                    ← Session-scoped TestClient fixture
-│   ├── test_validators.py             ← 48 validator unit tests
-│   └── test_api.py                    ← 34 API integration tests
-├── intent_model/                      ← Fine-tuned AlephBERT weights (local)
-├── command_reformulatuin_script.py    ← NLP pipeline (NER + templates)
-├── requirements.txt
-└── pytest.ini
+│   ├── conftest.py                 Session-scoped TestClient fixture
+│   ├── test_validators.py          48 validator unit tests
+│   └── test_api.py                 34 API integration tests
+├── command_reformulatuin_script.py NLP pipeline core (1,256 lines)
+├── requirements.txt                Python dependencies
+├── pytest.ini                      Pytest configuration
+└── logs/
+    └── feedback.jsonl              Feedback records, append-only (auto-created)
 ```
+
+---
+
+## Notes & Known Limitations
+
+- **`transformers==4.44.2` is pinned.** Versions 5.x introduce a new `modeling_layers.py` abstraction that deepens the call stack beyond Windows' 1 MB default thread stack limit, causing `STATUS_GUARD_PAGE_VIOLATION` crashes. Do not upgrade without testing on your target OS.
+- **Voice input requires Chrome or iOS Safari.** Firefox and other browsers do not implement the Web Speech API. Typed input works in all browsers.
+- **Number normalization is frontend-only.** Digits (e.g., `7`) are converted to Hebrew words (`שבע`) by the frontend before the request is sent. The backend validator rejects raw digits.
+- **Models load at startup, not on first request.** Cold start is ~10–20 seconds; after that all requests are fast.
+- **Feedback is fire-and-forget.** Logging failures are silently ignored and never surface to the user.
+- **CORS is open (`*`) in development.** For production, restrict allowed origins in `backend/main.py` to your deployed frontend URL.
