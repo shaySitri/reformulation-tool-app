@@ -64,7 +64,9 @@ from backend.schemas import (
     HealthResponse,
     ReformulateRequest,
     ReformulateResponse,
+    StatsResponse,
 )
+from backend.stats_reader import read_stats
 
 # ---------------------------------------------------------------------------
 # Logging — structured format makes it easy to grep by level or module name.
@@ -293,3 +295,27 @@ def submit_feedback(body: FeedbackRequest) -> FeedbackResponse:
         )
 
     return FeedbackResponse(ok=True)
+
+
+@app.get(
+    "/stats",
+    response_model=StatsResponse,
+    summary="Feedback statistics for developer / operator inspection",
+    description=(
+        "Reads logs/feedback.jsonl and returns aggregated statistics: "
+        "total interactions, siri_understood breakdown, per-intent counts, "
+        "and the 20 most recent records. Returns empty aggregations if no log exists yet."
+    ),
+    tags=["Stats"],
+)
+def get_stats() -> StatsResponse:
+    """Return aggregated feedback statistics from the JSONL log file."""
+    try:
+        data = read_stats()
+    except Exception:
+        logger.exception("Failed to read stats")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An internal error occurred.",
+        )
+    return StatsResponse(**data)

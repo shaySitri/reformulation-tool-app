@@ -20,7 +20,7 @@ input, malformed request body, internal crash), not for pipeline-level
 quality judgements.
 """
 
-from typing import Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -123,6 +123,32 @@ class FeedbackResponse(BaseModel):
     """Response body for the POST /feedback endpoint."""
 
     ok: bool = Field(description="True when the feedback record was successfully written.")
+
+
+class SiriUnderstoodStats(BaseModel):
+    """Counts and percentages for the siri_understood field."""
+    yes: int
+    no: int
+    unanswered: int
+    yes_pct: float
+    no_pct: float
+    unanswered_pct: float
+
+
+class IntentStats(BaseModel):
+    """Per-intent breakdown."""
+    total: int
+    yes: int
+    no: int
+    unanswered: int
+
+
+class StatsResponse(BaseModel):
+    """Response body for the GET /stats endpoint."""
+    total: int = Field(description="Total number of feedback records logged.")
+    siri_understood: SiriUnderstoodStats = Field(description="Counts and percentages for yes/no/unanswered.")
+    by_intent: Dict[str, IntentStats] = Field(description="Per-intent breakdown, sorted by total descending.")
+    recent: List[Dict[str, Any]] = Field(description="Last 20 records, newest first.")
 
 
 class HealthResponse(BaseModel):
