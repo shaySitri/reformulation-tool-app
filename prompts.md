@@ -1982,3 +1982,71 @@ Frontend:
 
 ### Notes
 Backend returns all records for frontend pagination. Summary cards always visible. All sections below summary are collapsible.
+
+---
+
+## Prompt 36 — Stats page tab-based redesign
+
+### User Prompt
+
+> I want to redesign the statistics / analytics page. Replace the current collapsible-section layout with a polished tab-based dashboard. The goal is a more professional, interactive, and visually distinct analytics experience.
+>
+> Tab structure (4 tabs):
+> 1. סקירה כללית (Overview) — 5 KPI cards + bar chart + problematic intent callout. Clicking the "Understood" or "Not Understood" cards navigates to the Logs tab pre-filtered.
+> 2. ניתוח כוונות (Intent Analysis) — per-intent success rate bar chart + sortable intent breakdown table.
+> 3. יומן פעילות (Activity Log) — full paginated logs (15/page), real-time search bar, intent dropdown filter, Understood filter buttons (All/כן/לא/ללא תשובה), sortable columns, CSV + JSON export buttons (client-side).
+> 4. הערות (User Notes) — all non-empty user notes, newest first.
+>
+> Design: dark navy tab bar (#1E293B) + white content area + indigo (#6366F1) accent. Left-border KPI cards with deeper shadow. Animated bar widths. Hover tooltips on bars. Sticky tab strip. Zebra-striped tables.
+>
+> No backend changes needed.
+
+### Assistant Response
+
+**Files changed:**
+- `frontend/src/pages/StatsPage.jsx` — full rewrite with tab-based layout
+- `frontend/src/pages/StatsPage.module.css` — full rewrite with dark navy + indigo design
+
+**Architecture:**
+
+```
+StatsPage
+├── Header (dark navy, always visible)
+├── TabBar (sticky, dark navy)
+│   ├── סקירה כללית → OverviewTab
+│   ├── ניתוח כוונות → IntentsTab
+│   ├── יומן פעילות → LogTab
+│   └── הערות → NotesTab
+└── ContentArea
+```
+
+**Tab 1 — Overview:**
+- 5 KPI cards in a responsive grid, left-border accent, hover lift on clickable cards
+- "Understood" and "Not Understood" cards are clickable → navigate to Log tab with pre-applied filter
+- Problematic intent callout (yellow banner, ≥3 answered samples, min success rate)
+- Horizontal bar chart (Yes / No / Unanswered), bars animate in via CSS transition, hover tooltip shows count + %
+
+**Tab 2 — Intent Analysis:**
+- Per-intent horizontal bar chart colored by success rate (green/yellow/red)
+- Sortable table: click any column header to sort asc/desc, arrow indicator updates
+- `useSortedData` hook encapsulates sort state + sorted memoized array
+
+**Tab 3 — Activity Log:**
+- Filter bar: search input (real-time, filters `original_input`), intent dropdown, Understood toggle buttons
+- `useEffect` resets page to 1 on filter change
+- Sortable columns (timestamp, intent_label, siri_understood)
+- Export CSV (with UTF-8 BOM for Excel) and JSON — pure client-side, `URL.createObjectURL(Blob)`, no backend
+- Zebra-striped rows, empty state message when no records match
+
+**Tab 4 — Notes:**
+- All non-empty notes, newest first, styled with indigo left-border accent
+
+**Key CSS decisions:**
+- `.tabBar` is `position: sticky; top: 0; z-index: 100` — always visible while scrolling content
+- `.tabBtnActive` uses `border-bottom: 3px solid #6366F1` for the active underline indicator
+- `.tabContent` has `animation: fadeIn 0.15s ease` for smooth tab transitions
+- `.kpiCard` uses `border-left` (not `border-top`) for a modern BI-tool look
+- `.barTooltip` is `position: absolute; top: -32px` — appears above the bar on hover
+
+### Notes
+No backend changes. All interactivity is client-side. The `initialUnderstoodFilter` prop on LogTab allows Overview cards to navigate with a pre-applied filter.
