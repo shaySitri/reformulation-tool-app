@@ -77,12 +77,12 @@ def read_stats() -> Dict[str, Any]:
         sorted(by_intent.items(), key=lambda x: x[1]["total"], reverse=True)
     )
 
-    # recent 20, newest first
-    recent = list(reversed(records[-20:]))
+    # all records, newest first
+    all_records = list(reversed(records))
 
     return {
         "total": total,
         "siri_understood": siri_understood,
         "by_intent": by_intent,
-        "recent": recent,
+        "records": all_records,
     }

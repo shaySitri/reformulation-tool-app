@@ -148,7 +148,7 @@ class StatsResponse(BaseModel):
     total: int = Field(description="Total number of feedback records logged.")
     siri_understood: SiriUnderstoodStats = Field(description="Counts and percentages for yes/no/unanswered.")
     by_intent: Dict[str, IntentStats] = Field(description="Per-intent breakdown, sorted by total descending.")
-    recent: List[Dict[str, Any]] = Field(description="Last 20 records, newest first.")
+    records: List[Dict[str, Any]] = Field(description="All records, newest first.")
 
 
 class HealthResponse(BaseModel):

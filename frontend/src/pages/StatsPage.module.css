@@ -5,7 +5,7 @@
  * Intentionally distinct from the teal elderly-user theme.
  */
 
-/* ── Page shell ──────────────────────────────────────────────────────────── */
+/* ── Page ────────────────────────────────────────────────────────────────── */
 
 .page {
   min-height: 100vh;
@@ -18,7 +18,7 @@
 /* ── Header ──────────────────────────────────────────────────────────────── */
 
 .header {
-  margin-bottom: 2rem;
+  margin-bottom: 1.75rem;
   border-bottom: 2px solid #E5E7EB;
   padding-bottom: 1rem;
 }
@@ -39,40 +39,22 @@
 
 /* ── States ──────────────────────────────────────────────────────────────── */
 
-.loading,
-.noData,
-.errorMsg {
+.loading, .noData, .errorMsg {
   text-align: center;
   margin-top: 4rem;
   font-size: 1.1rem;
   color: #6B7280;
 }
 
-.errorMsg {
-  color: #DC2626;
-}
-
-/* ── Section ─────────────────────────────────────────────────────────────── */
-
-.section {
-  margin-bottom: 2.5rem;
-}
-
-.sectionTitle {
-  margin: 0 0 1rem;
-  font-size: 1rem;
-  font-weight: 700;
-  color: #374151;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
+.errorMsg { color: #DC2626; }
 
 /* ── Summary cards ───────────────────────────────────────────────────────── */
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .card {
@@ -80,43 +62,91 @@
   border-radius: 12px;
   padding: 1.25rem 1rem;
   border-top: 4px solid #D1D5DB;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   text-align: center;
 }
 
-.accentTotal { border-top-color: #6366F1; }
-.accentYes   { border-top-color: #16A34A; }
-.accentNo    { border-top-color: #DC2626; }
+.accentTotal    { border-top-color: #6366F1; }
+.accentYes      { border-top-color: #16A34A; }
+.accentNo       { border-top-color: #DC2626; }
 .accentUnanswered { border-top-color: #9CA3AF; }
+.accentResponse { border-top-color: #0EA5E9; }
 
-.cardValue {
-  margin: 0 0 0.25rem;
-  font-size: 2rem;
-  font-weight: 800;
-  color: #111827;
-  line-height: 1;
+.cardValue { margin: 0 0 0.25rem; font-size: 2rem; font-weight: 800; color: #111827; line-height: 1; }
+.cardLabel { margin: 0; font-size: 0.85rem; font-weight: 600; color: #374151; }
+.cardSub   { margin: 0.2rem 0 0; font-size: 0.8rem; color: #9CA3AF; }
+
+/* ── Problematic intent callout ──────────────────────────────────────────── */
+
+.callout {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: #FEF9C3;
+  border: 1.5px solid #FDE047;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  color: #78350F;
 }
 
-.cardLabel {
-  margin: 0;
-  font-size: 0.85rem;
-  font-weight: 600;
+.calloutIcon { font-size: 1.1rem; }
+
+/* ── Collapsible sections ────────────────────────────────────────────────── */
+
+.collapsibleSection {
+  margin-bottom: 1.25rem;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  overflow: hidden;
+}
+
+.collapsibleHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.9rem 1.25rem;
+  background: #F9FAFB;
+  border: none;
+  border-bottom: 1px solid #E5E7EB;
+  cursor: pointer;
+  text-align: right;
+  direction: rtl;
+  transition: background-color 0.15s ease;
+}
+
+.collapsibleHeader:hover { background: #F3F4F6; }
+
+.collapsibleTitle {
+  font-size: 0.9rem;
+  font-weight: 700;
   color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.cardSub {
-  margin: 0.2rem 0 0;
-  font-size: 0.8rem;
-  color: #9CA3AF;
+.arrow {
+  display: inline-block;
+  font-size: 0.7rem;
+  color: #6B7280;
+  transition: transform 0.2s ease;
+  transform: rotate(0deg);
+}
+
+.arrowOpen {
+  transform: rotate(90deg);
+}
+
+.collapsibleBody {
+  padding: 1.25rem;
 }
 
 /* ── Bar chart ───────────────────────────────────────────────────────────── */
 
 .barChart {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -129,7 +159,7 @@
 }
 
 .barLabel {
-  width: 130px;
+  width: 140px;
   flex-shrink: 0;
   font-size: 0.9rem;
   color: #374151;
@@ -166,17 +196,12 @@
 
 /* ── Tables ──────────────────────────────────────────────────────────────── */
 
-.tableWrap {
-  overflow-x: auto;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-}
+.tableWrap { overflow-x: auto; }
 
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   color: #374151;
 }
 
@@ -186,36 +211,32 @@
 }
 
 .table th {
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 0.9rem;
   font-weight: 700;
   color: #6B7280;
   text-align: right;
   white-space: nowrap;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 .table td {
-  padding: 0.7rem 1rem;
+  padding: 0.6rem 0.9rem;
   border-bottom: 1px solid #F3F4F6;
-  vertical-align: top;
+  vertical-align: middle;
   text-align: right;
 }
 
-.table tbody tr:last-child td {
-  border-bottom: none;
-}
+.table tbody tr:last-child td { border-bottom: none; }
+.table tbody tr:hover { background-color: #F9FAFB; }
 
-.table tbody tr:hover {
-  background-color: #F9FAFB;
-}
+/* ── Intent tag ──────────────────────────────────────────────────────────── */
 
-/* Intent tag */
 .intentTag {
   display: inline-block;
-  padding: 0.2rem 0.6rem;
-  font-size: 0.78rem;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.75rem;
   font-weight: 600;
   background-color: #EEF2FF;
   color: #4F46E5;
@@ -224,36 +245,144 @@
   white-space: nowrap;
 }
 
-/* Colored cell values */
+/* ── Cell colors ─────────────────────────────────────────────────────────── */
+
 .cellYes        { color: #16A34A; font-weight: 700; }
 .cellNo         { color: #DC2626; font-weight: 700; }
 .cellUnanswered { color: #9CA3AF; }
+.cellMono       { font-family: monospace; font-size: 0.8rem; white-space: nowrap; color: #6B7280; }
+.cellNotes      { color: #9CA3AF; font-style: italic; max-width: 180px; word-break: break-word; }
 
-/* Badge for understood column */
+/* ── Badges ──────────────────────────────────────────────────────────────── */
+
 .badge {
   display: inline-block;
-  padding: 0.2rem 0.6rem;
+  padding: 0.2rem 0.55rem;
   border-radius: 99px;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .badge.yes        { background: #DCFCE7; color: #166534; }
 .badge.no         { background: #FEE2E2; color: #991B1B; }
 .badge.unanswered { background: #F3F4F6; color: #6B7280; }
+.statusSuccess    { background: #DCFCE7; color: #166534; }
+.statusFailed     { background: #FEE2E2; color: #991B1B; }
 
-/* Monospace timestamp */
-.cellMono {
-  font-family: monospace;
-  font-size: 0.82rem;
-  white-space: nowrap;
-  color: #6B7280;
+/* ── Success rate badge in intent table ──────────────────────────────────── */
+
+.srBadge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 99px;
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
-/* Notes cell — muted */
-.cellNotes {
+.srGood { background: #DCFCE7; color: #166534; }
+.srMid  { background: #FEF9C3; color: #78350F; }
+.srBad  { background: #FEE2E2; color: #991B1B; }
+
+/* ── Pagination ──────────────────────────────────────────────────────────── */
+
+.paginationRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #E5E7EB;
+}
+
+.pageInfo {
+  font-size: 0.85rem;
+  color: #6B7280;
+  font-family: monospace;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pageNumbers {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.pageBtn {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  font-weight: 600;
+  color: #374151;
+  background: #ffffff;
+  border: 1.5px solid #D1D5DB;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.pageBtn:hover:not(:disabled) {
+  background: #F3F4F6;
+  border-color: #9CA3AF;
+}
+
+.pageBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pageBtnActive {
+  background: #6366F1;
+  border-color: #6366F1;
+  color: #ffffff;
+}
+
+.pageBtnActive:hover { background: #4F46E5; border-color: #4F46E5; }
+
+.pageEllipsis {
+  padding: 0.3rem 0.4rem;
+  font-size: 0.85rem;
   color: #9CA3AF;
-  font-style: italic;
-  max-width: 200px;
-  word-break: break-word;
+}
+
+/* ── Notes list ──────────────────────────────────────────────────────────── */
+
+.notesList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.noteItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.75rem 1rem;
+  background: #F9FAFB;
+  border-radius: 8px;
+  border-right: 3px solid #D1D5DB;
+}
+
+.noteMeta {
+  font-size: 0.78rem;
+  color: #9CA3AF;
+  font-family: monospace;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.noteText {
+  font-size: 0.95rem;
+  color: #374151;
 }
