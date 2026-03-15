@@ -210,6 +210,7 @@ function App() {
           <ResultDisplay result={result} error={error} />
           {feedbackData && (
             <FeedbackDialog
+              command={feedbackData.reformulated_command}
               onSubmit={handleFeedbackSubmit}
               onClose={handleFeedbackClose}
             />

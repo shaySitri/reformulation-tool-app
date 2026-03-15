@@ -19,7 +19,7 @@
 import { useState } from 'react'
 import styles from './FeedbackDialog.module.css'
 
-function FeedbackDialog({ onSubmit, onClose }) {
+function FeedbackDialog({ command, onSubmit, onClose }) {
   // null = neither selected, true = כן selected, false = לא selected
   const [selected, setSelected] = useState(null)
   const [notes, setNotes] = useState('')
@@ -45,6 +45,10 @@ function FeedbackDialog({ onSubmit, onClose }) {
         >
           ✕
         </button>
+
+        {/* Reformulated command display */}
+        <p className={styles.commandLabel}>פקודה מתוקנת:</p>
+        <p className={styles.commandText}>"{command}"</p>
 
         {/* Question */}
         <p className={styles.question}>האם סירי הבינה את הפקודה?</p>
