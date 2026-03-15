@@ -31,7 +31,7 @@ context manager at server startup. This ensures:
 
 import logging
 from pathlib import Path
-from typing import Tuple
+from typing import Dict, Tuple, Union
 
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
@@ -51,7 +51,7 @@ class IntentClassifier:
         # → (0, "call")
     """
 
-    def __init__(self, model_dir: str | Path) -> None:
+    def __init__(self, model_dir: Union[str, Path]) -> None:
         """
         Initialize the classifier with the path to the model directory.
 
@@ -64,7 +64,7 @@ class IntentClassifier:
         self.tokenizer = None
         self.model = None
         # Maps integer class index → human-readable label, e.g. {2: "sms"}
-        self.id2label: dict[int, str] = {}
+        self.id2label: Dict[int, str] = {}
         self._loaded = False
 
     def load(self) -> None:

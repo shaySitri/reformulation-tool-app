@@ -44,7 +44,7 @@ uvicorn or pytest is launched.
 import logging
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 # ---------------------------------------------------------------------------
 # Add repository root to sys.path so the reformulation script is importable
@@ -64,7 +64,7 @@ from backend.validators import validate_input, validate_output  # noqa: E402
 logger = logging.getLogger(__name__)
 
 # Human-readable labels for logging (mirrors model config.json id2label).
-_INTENT_LABELS: dict[int, str] = {
+_INTENT_LABELS: Dict[int, str] = {
     0: "call",
     1: "alarm",
     2: "sms",
@@ -78,7 +78,7 @@ _INTENT_LABELS: dict[int, str] = {
 }
 
 
-def run_pipeline(utterance: str, classifier: Any) -> dict[str, Any]:
+def run_pipeline(utterance: str, classifier: Any) -> Dict[str, Any]:
     """
     Execute the full validated reformulation pipeline on a Hebrew utterance.
 
