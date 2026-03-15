@@ -251,7 +251,7 @@ function OverviewTab({ stats, onNavigateToLog }) {
     const answered = counts.yes + counts.no
     if (answered >= 3) {
       const rate = successRate(counts.yes, counts.no)
-      if (rate !== null && rate < minRate) {
+      if (rate !== null && rate < minRate && rate < 80) {
         minRate = rate
         problematicIntent = { label, rate }
       }
