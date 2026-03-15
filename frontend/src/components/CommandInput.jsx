@@ -147,11 +147,11 @@ function CommandInput({
       {/* Submit button */}
       <button
         type="submit"
-        className={styles.button}
+        className={`${styles.button} ${loading ? styles.buttonLoading : ''}`}
         disabled={submitDisabled}
         aria-busy={loading}
       >
-        {loading ? 'שולח...' : 'שלח פקודה'}
+        {loading ? 'מעבד...' : 'שלח'}
       </button>
     </form>
   )

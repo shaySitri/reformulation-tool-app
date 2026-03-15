@@ -1,126 +1,177 @@
 /*
  * App.module.css
  * --------------
- * Layout and chrome styles for the root App component.
+ * Layout and chrome for the root App component.
  *
- * The page is a single centered column with a white card containing the
- * input and result. This is deliberately simple — one task per screen,
- * no clutter, large targets.
+ * Structure:
+ *   .page         — full-viewport column wrapper (no max-width — header is full-width)
+ *   .appHeader    — branded gradient bar spanning full width
+ *   .workspace    — constrained centered column (max-width 680px) below the header
+ *   .card         — white input card with deep shadow
+ *   .stepStrip    — horizontal numbered usage steps (LTR, inside card)
+ *   .resetButton  — ghost button below the result card
  */
 
-/* Full-page column — vertically starts near top, horizontally centered */
+/* ── Page ────────────────────────────────────────────────────────────────── */
+
 .page {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 2.5rem 1.25rem 3rem;
+  align-items: stretch;
+}
+
+/* ── Branded header ───────────────────────────────────────────────────────── */
+
+.appHeader {
   width: 100%;
-  max-width: 620px;
+  background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%);
+  padding: 1.5rem 2rem 1.4rem;
+}
+
+.appHeaderContent {
+  max-width: 680px;
   margin: 0 auto;
+  direction: rtl;
 }
 
-/* App header */
-.header {
-  width: 100%;
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-/* App title — Heebo loaded via Google Fonts in index.html */
-.title {
-  margin: 0 0 0.5rem 0;
+.appTitle {
+  margin: 0 0 0.3rem;
   font-family: 'Heebo', 'Arial Hebrew', Arial, sans-serif;
-  font-size: 2.2rem;
+  font-size: 1.8rem;
   font-weight: 800;
-  color: #1a1a2e;
+  color: #F8FAFC;
   line-height: 1.2;
   letter-spacing: -0.01em;
 }
 
-/* Subtitle / instruction line */
-.subtitle {
+.appSubtitle {
   margin: 0;
   font-size: 1rem;
-  color: #5d6d7e;
+  color: #BFDBFE;
   line-height: 1.5;
 }
 
-/* Usage instructions box — right border stripe (RTL visual start), light blue tint */
-.instructions {
-  border-right: 4px solid #2563EB;
-  border-radius: 0 8px 8px 0;
-  background-color: #F8FAFF;
-  padding: 0.9rem 1rem 0.9rem 0.75rem;
-  margin-bottom: 1.75rem;
-}
+/* ── Workspace ────────────────────────────────────────────────────────────── */
 
-.instructionsTitle {
-  margin: 0 0 0.5rem 0;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #2563EB;
-}
-
-.instructionsList {
-  margin: 0;
-  /* RTL ordered list: indent from the right to make room for numbers */
-  padding: 0 1.3rem 0 0;
-  list-style-type: decimal;
+.workspace {
+  flex: 1;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 3rem;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 1rem;
 }
 
-.instructionsList li {
-  font-size: 0.95rem;
-  color: #334155;
-  line-height: 1.5;
-}
+/* ── Input card ───────────────────────────────────────────────────────────── */
 
-/* Reset button — same dimensions as Send, ghost outlined in slate */
-.resetButton {
-  width: 100%;
-  margin-top: 0.5rem;
-  padding: 1rem;
-  font-size: 1.2rem;
-  font-family: inherit;
-  font-weight: 700;
-  color: #64748B;
-  background-color: transparent;
-  border: 2px solid #CBD5E1;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: border-color 0.2s ease, color 0.2s ease;
-  min-height: 58px;
-  letter-spacing: 0.02em;
-}
-
-.resetButton:hover {
-  border-color: #94A3B8;
-  color: #1E293B;
-}
-
-.resetButton:focus-visible {
-  outline: 3px solid #1a56db;
-  outline-offset: 3px;
-}
-
-/* White content card — Direction 1: larger radius, blue-tinted shadow */
 .card {
   width: 100%;
   background-color: #ffffff;
   border-radius: 20px;
-  padding: 2rem 1.75rem;
+  padding: 1.75rem;
   box-shadow:
-    0 4px 24px rgba(37, 99, 235, 0.07),
+    0 8px 32px rgba(37, 99, 235, 0.10),
     0 1px 4px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 1.25rem;
+  transition: box-shadow 0.3s ease;
 }
 
-/* Gap between the form and the result card */
-.resultArea {
-  margin-top: 0.75rem;
+/* Soft pulsing glow on the card while a request is in flight */
+.cardLoading {
+  animation: cardGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes cardGlow {
+  0%, 100% {
+    box-shadow:
+      0 8px 32px rgba(37, 99, 235, 0.10),
+      0 1px 4px rgba(0, 0, 0, 0.04);
+  }
+  50% {
+    box-shadow:
+      0 8px 40px rgba(37, 99, 235, 0.28),
+      0 1px 4px rgba(0, 0, 0, 0.04);
+  }
+}
+
+/* ── Step strip ───────────────────────────────────────────────────────────── */
+
+/*
+ * Intentionally LTR so the numbered steps always read left → right
+ * regardless of the page's RTL direction. Hebrew step labels use the
+ * Unicode bidi algorithm and remain legible.
+ */
+.stepStrip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  background: #F1F5F9;
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  direction: ltr;
+  flex-wrap: wrap;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.stepNum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: #2563EB;
+  color: #ffffff;
+  border-radius: 50%;
+  font-size: 0.72rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+/* ── Reset button ─────────────────────────────────────────────────────────── */
+
+.resetButton {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  font-size: 1.1rem;
+  font-family: inherit;
+  font-weight: 600;
+  color: #64748B;
+  background-color: transparent;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background-color 0.15s ease;
+  min-height: 52px;
+  letter-spacing: 0.02em;
+}
+
+.resetButton:hover:not(:disabled) {
+  border-color: #94A3B8;
+  color: #1E293B;
+  background-color: #F8FAFC;
+}
+
+.resetButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.resetButton:focus-visible {
+  outline: 3px solid #2563EB;
+  outline-offset: 3px;
 }

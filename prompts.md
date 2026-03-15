@@ -2050,3 +2050,60 @@ StatsPage
 
 ### Notes
 No backend changes. All interactivity is client-side. The `initialUnderstoodFilter` prop on LogTab allows Overview cards to navigate with a pre-applied filter.
+
+---
+
+## Prompt 37 — Main UI redesign: modern AI-product interface
+
+### User Prompt
+
+> I want to redesign the main UI of the application.
+>
+> Goal: The interface should feel like a modern AI-powered product and not like a simple form or something that looks like Google Forms.
+> However, the interface must still remain very accessible and easy to use for older adults.
+>
+> Design principles:
+> 1. Modern and sophisticated — polished, professional, visually appealing. Cards, spacing, hierarchy, subtle visual depth.
+> 2. Interactive and engaging — hover states, smooth transitions, clear visual feedback, loading indicators.
+> 3. Clear visual hierarchy — user immediately understands where to enter, where the result is, what the next step is.
+> 4. Accessibility for older adults — large readable text, clear buttons, strong contrast, minimal clutter.
+> 5. Product-style layout — centered workspace, card-based sections, distinct input and result areas.
+> 6. Result emphasis — reformulated command appears in a visually prominent way.
+> 7. Keep all existing functionality (voice input, playback, reset, etc.).
+
+### Assistant Response
+
+**Files changed:**
+- `frontend/src/App.jsx` — added branded header, replaced instructions with step strip, moved result outside input card
+- `frontend/src/App.module.css` — full redesign: gradient header, workspace container, step strip, loading glow
+- `frontend/src/components/CommandInput.jsx` — button text: "שלח פקודה"→"שלח", loading: "שולח..."→"מעבד...", added `.buttonLoading` class
+- `frontend/src/components/CommandInput.module.css` — 70px input, hover/press scale, loading pulse
+- `frontend/src/components/ResultDisplay.jsx` — updated label + error text + TTS button playing state
+- `frontend/src/components/ResultDisplay.module.css` — slideUp animation, 2.2rem command, left-border cards, solid TTS button
+
+**Layout structure:**
+```
+<div.page>                           ← full viewport, no max-width
+  <header.appHeader>                 ← full-width gradient bar (#1E3A8A→#2563EB)
+    <div.appHeaderContent>           ← constrained to 680px
+  <div.workspace>                    ← max-width 680px, centered
+    <main.card [.cardLoading?]>      ← white input card
+      <div.stepStrip>                ← ① הקלידו פקודה  ② לחצו שלח  ③ אמרו לסירי
+      <CommandInput>                 ← 70px input, scale hover/press on button
+    <ResultDisplay>                  ← slides up from below, left-border accent
+    <button.resetButton>             ← ghost style, below result
+    <FeedbackDialog>                 ← modal, position:fixed
+```
+
+**Key design decisions:**
+- Header: `linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)` — branded, product-like
+- Step strip: `direction: ltr` on a gray pill (`#F1F5F9`). Numbered circles (22px blue). Replaces the verbose instructions list.
+- Input card loading: CSS `animation: cardGlow` pulses the card's box-shadow from `rgba(37,99,235,0.10)` to `rgba(37,99,235,0.28)`
+- Button loading: `.buttonLoading` fades 0.82→0.60 opacity repeatedly. `cursor: wait`.
+- Result card: `animation: slideUp 0.3s ease-out` (from `translateY(12px)`). `border-right: 5px solid #0D9488` (RTL leading border). Background `#F0FDF9`. Command text `2.2rem font-weight:800`.
+- TTS button: solid teal fill (not outlined) — it's the primary next action. `min-height: 60px`.
+- Error card: `border-right: 5px solid #DC2626`, `background: #FFF1F2`. Two lines: title + subtitle.
+- Reset button: ghost style (`border: 1.5px solid #CBD5E1`), lives outside the input card.
+
+### Notes
+No backend changes. FeedbackDialog unchanged. All functionality preserved.

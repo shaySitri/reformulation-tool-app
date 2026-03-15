@@ -52,7 +52,8 @@ function ResultDisplay({ result, error }) {
         role="alert"
         aria-live="assertive"
       >
-        <p className={styles.errorText}>אירעה שגיאה. אנא נסה שוב.</p>
+        <p className={styles.errorTitle}>✕ לא הצלחנו לנסח את הפקודה</p>
+        <p className={styles.errorSub}>אנא נסו שוב בניסוח שונה</p>
       </div>
     )
   }
@@ -63,13 +64,13 @@ function ResultDisplay({ result, error }) {
       role="status"
       aria-live="polite"
     >
-      {/* Instruction line above the reformulated command */}
-      <p className={styles.resultLabel}>הפקודה המתוקנת:</p>
+      {/* Status label */}
+      <p className={styles.resultLabel}>✓ הפקודה לסירי מוכנה</p>
 
-      {/* The reformulated command — large, prominent text */}
+      {/* The reformulated command — very large, prominent */}
       <p className={styles.resultText}>{result}</p>
 
-      {/* TTS button — reads the command aloud; disabled while speaking */}
+      {/* TTS button — reads the command aloud */}
       <button
         type="button"
         className={styles.ttsButton}
@@ -77,7 +78,7 @@ function ResultDisplay({ result, error }) {
         disabled={speaking}
         aria-label="הקראת הפקודה בקול"
       >
-        {speaking ? '🔊 מקריא...' : '🔊 הקראת הפקודה'}
+        {speaking ? '▐▐ מנגן...' : '🔊 הקראת הפקודה'}
       </button>
     </div>
   )

@@ -1,31 +1,26 @@
 /*
  * ResultDisplay.module.css
  * ------------------------
- * Styles for the ResultDisplay component.
+ * Success result card and error card.
  *
- * Two visual states:
- *   .successCard — light green background, dark green text (success result)
- *   .errorCard   — light red background, dark red text (any failure)
- *
- * Both states use a card layout with a clear visual boundary so that the
- * result area is easy to distinguish from the input area.
+ * Both cards slide up from below (slideUp animation) when they appear.
+ * Distinct left-border accent (border-right in RTL = visual leading edge)
+ * makes each state immediately recognizable.
  */
 
 /* Shared card shell */
 .card {
   width: 100%;
-  padding: 1.5rem 1.25rem;
-  border-radius: 12px;
-  border-width: 1.5px;
-  border-style: solid;
-  /* Animate in from slight offset for gentle feedback */
-  animation: slideIn 0.25s ease-out;
+  padding: 1.5rem 1.5rem 1.5rem 1.25rem;
+  border-radius: 16px;
+  border: none;
+  animation: slideUp 0.3s ease-out;
 }
 
-@keyframes slideIn {
+@keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(-6px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -33,82 +28,106 @@
   }
 }
 
-/* Success state — teal tones (Direction 1) */
+/* ── Success card ─────────────────────────────────────────────────────────── */
+
 .successCard {
   background-color: #F0FDF9;
-  border-color: #99F6E4;
+  /* border-right is the visual leading border in RTL */
+  border-right: 5px solid #0D9488;
+  box-shadow: 0 4px 20px rgba(13, 148, 136, 0.10);
 }
 
-/* Error state — red tones */
+/* ── Error card ───────────────────────────────────────────────────────────── */
+
 .errorCard {
-  background-color: #fef2f2;
-  border-color: #fca5a5;
+  background-color: #FFF1F2;
+  border-right: 5px solid #DC2626;
+  box-shadow: 0 4px 20px rgba(220, 38, 38, 0.08);
 }
 
-/* Instruction sentence shown above the reformulated command */
+/* ── Success content ──────────────────────────────────────────────────────── */
+
+/* "✓ הפקודה לסירי מוכנה" — small status label */
 .resultLabel {
-  margin: 0 0 0.75rem 0;
-  font-size: 1rem;
-  font-weight: 600;
+  margin: 0 0 0.6rem 0;
+  font-size: 0.85rem;
+  font-weight: 700;
   color: #0F766E;
-  line-height: 1.5;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.4;
 }
 
-/* The reformulated command — large and prominent */
+/* The reformulated command — large, bold, unmissable */
 .resultText {
-  margin: 0;
-  font-size: 1.6rem;
-  font-weight: 700;
+  margin: 0 0 1.25rem 0;
+  font-size: 2.2rem;
+  font-weight: 800;
   color: #134E4A;
-  line-height: 1.4;
-  /* Wrap gracefully for long commands */
+  line-height: 1.35;
   word-break: break-word;
 }
 
-/* Generic error message */
-.errorText {
-  margin: 0;
+/* ── Error content ────────────────────────────────────────────────────────── */
+
+.errorTitle {
+  margin: 0 0 0.4rem 0;
   font-size: 1.2rem;
-  font-weight: 600;
-  color: #991b1b;
-  line-height: 1.5;
+  font-weight: 700;
+  color: #991B1B;
+  line-height: 1.4;
 }
 
+.errorSub {
+  margin: 0;
+  font-size: 1rem;
+  color: #B91C1C;
+  font-weight: 500;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+/* ── TTS button ───────────────────────────────────────────────────────────── */
+
 /*
- * TTS (read-aloud) button — teal outlined style matching the Direction 1
- * result card. White background with teal border and text; fills on hover.
+ * Solid teal fill — this is the primary next action after the command appears.
+ * Full-width, 60px tall for comfortable touch target.
  */
 .ttsButton {
   width: 100%;
-  margin-top: 1.1rem;
-  padding: 0.85rem 1rem;
-  font-size: 1.05rem;
+  padding: 1rem;
+  font-size: 1.15rem;
   font-family: inherit;
-  font-weight: 600;
-  color: #0D9488;
-  background-color: #FFFFFF;
-  border: 2px solid #0D9488;
-  border-radius: 10px;
+  font-weight: 700;
+  color: #ffffff;
+  background-color: #0D9488;
+  border: none;
+  border-radius: 12px;
   cursor: pointer;
-  /* Minimum height for comfortable touch target */
-  min-height: 52px;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  min-height: 60px;
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.30);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
   letter-spacing: 0.01em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ttsButton:hover:not(:disabled) {
-  background-color: #0D9488;
-  color: #FFFFFF;
+  background-color: #0F766E;
+  box-shadow: 0 6px 18px rgba(13, 148, 136, 0.38);
+  transform: scale(1.01);
 }
 
 .ttsButton:active:not(:disabled) {
-  background-color: #0F766E;
-  color: #FFFFFF;
+  background-color: #115E59;
+  transform: scale(0.99);
 }
 
 .ttsButton:disabled {
-  opacity: 0.6;
+  opacity: 0.65;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .ttsButton:focus-visible {

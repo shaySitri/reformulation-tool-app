@@ -173,51 +173,54 @@ function App() {
 
   return (
     <div className={styles.page}>
-      {/* App header */}
-      <header className={styles.header}>
-        <h1 className={styles.title}>עוזר הפקודות הקולי</h1>
-        <p className={styles.subtitle}>
-          הפכו כל בקשה בשפה טבעית לפקודה מובנית לסירי
-        </p>
+
+      {/* ── Branded full-width header ── */}
+      <header className={styles.appHeader}>
+        <div className={styles.appHeaderContent}>
+          <h1 className={styles.appTitle}>🎙 עוזר הפקודות הקולי</h1>
+          <p className={styles.appSubtitle}>הפכו כל מחשבה לפקודה ברורה לסירי</p>
+        </div>
       </header>
 
-      {/* Main card — instructions, input, result */}
-      <main className={styles.card}>
-        {/* Usage instructions for older adults */}
-        <section className={styles.instructions} aria-label="הוראות שימוש">
-          <p className={styles.instructionsTitle}>איך משתמשים?</p>
-          <ol className={styles.instructionsList}>
-            <li>הקלידו את הבקשה שלכם בתיבה, או לחצו על כפתור ההקלטה ודברו.</li>
-            <li>לחצו על כפתור השליחה.</li>
-            <li>הפעילו את סירי ואמרו לה את הפקודה המתוקנת, או לחצו על כפתור ההקראה כדי להשמיע אותה.</li>
-          </ol>
-        </section>
+      {/* ── Centered workspace ── */}
+      <div className={styles.workspace}>
 
-        {/* Hebrew text input + submit + mic buttons */}
-        <CommandInput
-          utterance={utterance}
-          onChange={setUtterance}
-          onSubmit={sendUtterance}
-          loading={loading}
-          recording={recording}
-          onStartRecording={startRecording}
-          onStopRecording={stopRecording}
-          speechSupported={speechSupported}
-        />
+        {/* Input card */}
+        <main className={`${styles.card} ${loading ? styles.cardLoading : ''}`}>
 
-        {/* Result / error area — only rendered after a response */}
-        <div className={styles.resultArea}>
-          <ResultDisplay result={result} error={error} />
-          {feedbackData && (
-            <FeedbackDialog
-              command={feedbackData.reformulated_command}
-              onSubmit={handleFeedbackSubmit}
-              onClose={handleFeedbackClose}
-            />
-          )}
-        </div>
+          {/* Horizontal step strip — replaces the instructions list */}
+          <div className={styles.stepStrip} aria-label="שלבי השימוש">
+            <div className={styles.step}>
+              <span className={styles.stepNum}>1</span>
+              <span>הקלידו פקודה</span>
+            </div>
+            <div className={styles.step}>
+              <span className={styles.stepNum}>2</span>
+              <span>לחצו שלח</span>
+            </div>
+            <div className={styles.step}>
+              <span className={styles.stepNum}>3</span>
+              <span>אמרו לסירי</span>
+            </div>
+          </div>
 
-        {/* Reset button — visible once the user has typed or received a response */}
+          {/* Hebrew text input + submit + mic */}
+          <CommandInput
+            utterance={utterance}
+            onChange={setUtterance}
+            onSubmit={sendUtterance}
+            loading={loading}
+            recording={recording}
+            onStartRecording={startRecording}
+            onStopRecording={stopRecording}
+            speechSupported={speechSupported}
+          />
+        </main>
+
+        {/* Result / error card — outside the input card, slides up */}
+        <ResultDisplay result={result} error={error} />
+
+        {/* Reset button — below everything, ghost style */}
         {showReset && (
           <button
             type="button"
@@ -225,10 +228,19 @@ function App() {
             onClick={resetAll}
             disabled={loading}
           >
-            התחל מחדש
+            ↩ ניסיון חדש
           </button>
         )}
-      </main>
+
+        {/* Feedback modal — position:fixed, not affected by DOM placement */}
+        {feedbackData && (
+          <FeedbackDialog
+            command={feedbackData.reformulated_command}
+            onSubmit={handleFeedbackSubmit}
+            onClose={handleFeedbackClose}
+          />
+        )}
+      </div>
     </div>
   )
 }
