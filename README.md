@@ -85,59 +85,47 @@ This system acts as a **bridge layer**: it accepts a freeform spoken Hebrew utte
 
 ## Architecture
 
-```
-Hebrew utterance (voice or typed)
-        │
-        ▼
-  ┌─────────────────────────────────────┐
-  │  Frontend preprocessing             │
-  │  • Digits → Hebrew words (0–999)    │
-  │  • Strip wake word "סירי"           │
-  │  • Remove non-Hebrew characters     │
-  └─────────────────────────────────────┘
-        │  POST /api/reformulate
-        ▼
-  ┌─────────────────────────────────────┐
-  │  Input validation                   │
-  │  Hebrew letters (א–ת) + space only  │
-  │  Reject empty / invalid chars → 400 │
-  └─────────────────────────────────────┘
-        │
-        ▼
-  ┌─────────────────────────────────────┐
-  │  Intent classification              │
-  │  Fine-tuned AlephBERT (768-dim)     │
-  │  10 classes · 99.6% accuracy        │
-  └─────────────────────────────────────┘
-        │
-        ▼
-  ┌─────────────────────────────────────┐
-  │  Named entity extraction            │
-  │  heBERT_NER (primary)               │
-  │  DictaBERT-NER (fallback)           │
-  │  Entities: PERSON · LOCATION · TIME │
-  └─────────────────────────────────────┘
-        │
-        ▼
-  ┌─────────────────────────────────────┐
-  │  Intent-specific handler            │
-  │  Slot filling + template assembly   │
-  │  Fuzzy matching for filler words    │
-  │  Hebrew prefix normalization (ב, ל) │
-  └─────────────────────────────────────┘
-        │
-        ▼
-  ┌─────────────────────────────────────┐
-  │  Output validation                  │
-  │  Hebrew only · min 6 chars          │
-  │  Failure → status "failed", 200     │
-  └─────────────────────────────────────┘
-        │
-        ▼
-  Canonical Hebrew command string
-        │
-        ▼
-  TTS playback at 0.75× rate
+```mermaid
+flowchart TD
+    A([🎙️ Hebrew utterance\nvoice or typed]):::io
+
+    subgraph FE["🖥️  Frontend"]
+        B["Preprocessing\n• Digits → Hebrew words\n• Strip wake word סירי\n• Remove non-Hebrew chars"]:::frontend
+    end
+
+    subgraph BE["⚙️  Backend  —  POST /api/reformulate"]
+        C{"Input validation\nHebrew + space only"}:::validation
+        D["Intent classification\nAlephBERT · 768-dim\n10 classes · 99.6% acc."]:::nlp
+
+        subgraph NER["Named Entity Recognition"]
+            E1["heBERT_NER\n(primary)"]:::nlp
+            E2["DictaBERT-NER\n(fallback)"]:::nlp
+        end
+
+        F["Intent-specific handler\nSlot filling · template assembly\nFuzzy matching · prefix normalization"]:::nlp
+        G{"Output validation\nHebrew only · min 6 chars"}:::validation
+    end
+
+    H([✅ Canonical Hebrew command]):::output
+    I([🔊 TTS playback at 0.75× rate]):::output
+    ERR1([❌ HTTP 400]):::error
+    ERR2([⚠️ status: failed]):::error
+
+    A --> B --> C
+    C -- invalid --> ERR1
+    C -- valid --> D --> E1
+    E1 -- entity found --> F
+    E1 -- no entity --> E2 --> F
+    F --> G
+    G -- unusable output --> ERR2
+    G -- valid --> H --> I
+
+    classDef io        fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a,font-weight:bold
+    classDef frontend  fill:#eff6ff,stroke:#60a5fa,color:#1d4ed8
+    classDef validation fill:#fef3c7,stroke:#f59e0b,color:#92400e,font-weight:bold
+    classDef nlp       fill:#ede9fe,stroke:#7c3aed,color:#3b0764
+    classDef output    fill:#d1fae5,stroke:#10b981,color:#064e3b,font-weight:bold
+    classDef error     fill:#fee2e2,stroke:#ef4444,color:#7f1d1d
 ```
 
 ### Key Components
