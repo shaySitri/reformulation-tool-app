@@ -2,6 +2,7 @@
 ### מנסח פקודות קוליות בעברית
 
 > Converts natural spoken Hebrew utterances into canonical, Siri-ready commands — built for elderly Israeli smartphone users.
+> Developed using Claude Code AI assistant
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111%2B-009688)
@@ -38,17 +39,6 @@ Elderly Israeli smartphone users often struggle to phrase commands the way Siri 
 
 This system acts as a **bridge layer**: it accepts a freeform spoken Hebrew utterance, classifies its intent using a fine-tuned BERT model, extracts named entities (people, locations, dates/times) with a dual NER pipeline, and reconstructs a clean canonical command that Siri reliably understands. The reformulated command is read aloud to the user at a comfortable pace, ready to be spoken to Siri.
 
-**Example transformations:**
-
-| User says | System produces |
-|-----------|----------------|
-| `תשלחי הודעה לישראל שאני מאחרת` | `שלח הודעה לישראל אני מאחרת` |
-| `תתקשרי לאמא שלי` | `תתקשרי אמא` |
-| `מה מזג האוויר היום בתל אביב` | `מה מזג האוויר בתל אביב` |
-| `תעיר אותי בשבע וחצי בבוקר` | `התקם הפעם ו שבע וחצי בוקר` |
-| `תכתבי לי פתק לקנות לחם וחלב` | `כתוב לי פתק עם לקנות לחם וחלב` |
-
----
 
 ## Features
 
@@ -63,23 +53,6 @@ This system acts as a **bridge layer**: it accepts a freeform spoken Hebrew utte
 - **Developer stats dashboard** — Per-intent success rates, success percentage over time, full log viewer at `/stats`
 - **Full RTL Hebrew UI** — Rubik and Heebo fonts, right-to-left layout throughout, Hebrew-idiomatic error messages
 - **Large touch targets** — All interactive elements ≥ 54 px, designed for older adults with reduced dexterity
-
----
-
-## Intent Map
-
-| ID | Intent | Example Input | Example Output |
-|----|--------|--------------|----------------|
-| 0 | `call` | `תתקשרי לדוד` | `תתקשרי דוד` |
-| 1 | `alarm` | `תעיר אותי בשש בבוקר` | `התקם הפעם ו שש בוקר` |
-| 2 | `sms` | `שלחי הודעה לרות שאני בדרך` | `שלח הודעה לרות אני בדרך` |
-| 3 | `search_query` | `מה זה גלוקוז` | `חפש גלוקוז` |
-| 4 | `navigation` | `תנווטי אותי לבית החולים` | `נווט אותי לבית החולים` |
-| 5 | `calendar` | `תוסיפי פגישה עם הרופא ביום שלישי` | `הוסף אירוע ליומן ביום שלישי פגישה עם הרופא` |
-| 6 | `camera` | `תצלמי אותי` | `צילום` |
-| 7 | `weather` | `מה מזג האוויר מחר בחיפה` | `מה מזג האוויר בחיפה` |
-| 8 | `notes` | `תכתבי לי פתק לקנות לחם` | `כתוב לי פתק עם לקנות לחם` |
-| 9 | `flashlight` | `תדליקי את הפנס` | `דליקו פנס` |
 
 ---
 
