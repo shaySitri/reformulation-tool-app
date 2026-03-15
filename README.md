@@ -14,19 +14,19 @@
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/main_interface.png" alt="Main Interface" width="700"/>
+  <img src="screenshots/main_interface.png" alt="Main Interface" width="700"/>
   <br/><em>Main interface — voice input and reformulated command card</em>
 </p>
 <!-- 📸 Replace docs/screenshots/main_interface.png with your screenshot -->
 
 <p align="center">
-  <img src="docs/screenshots/result_card.png" alt="Result Card with TTS" width="700"/>
+  <img src="screenshots/result_card.png" alt="Result Card with TTS" width="700"/>
   <br/><em>Result card — reformulated Siri command with text-to-speech playback button</em>
 </p>
 <!-- 📸 Replace docs/screenshots/result_card.png with your screenshot -->
 
 <p align="center">
-  <img src="docs/screenshots/stats_dashboard.png" alt="Developer Stats Dashboard" width="700"/>
+  <img src="screenshots/stats_dashboard.png" alt="Developer Stats Dashboard" width="700"/>
   <br/><em>Developer stats dashboard — per-intent feedback analytics at /stats</em>
 </p>
 <!-- 📸 Replace docs/screenshots/stats_dashboard.png with your screenshot -->
